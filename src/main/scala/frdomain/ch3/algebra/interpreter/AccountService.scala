@@ -1,0 +1,32 @@
+package frdomain.ch3
+package algebra.interpreter
+
+import java.util.{ Date, Calendar }
+import util.{ Try, Success, Failure }
+
+import common._
+import algebra.AccountService
+
+object AccountService extends AccountService[Account, Amount, Balance] {
+  def open(no: String, name: String, openingDate: Option[Date]): Try[Account] = {
+    if (no.isEmpty || name.isEmpty) Failure(new Exception(s"Account no or name cannot be blank") )
+    else if (openingDate.getOrElse(today) before today) Failure(new Exception(s"Cannot open account in the past"))
+    else Success(Account(no, name, openingDate.getOrElse(today)))
+  }
+
+  def close(account: Account, closeDate: Option[Date]): Try[Account] = {
+    if (closeDate.getOrElse(today) before account.dateOfOpening) 
+      Failure(new Exception(s"Close date $closeDate cannot be before opening date ${account.dateOfOpening}")) 
+    else Success(account.copy(dateOfClosing = closeDate))
+  }
+
+  def debit(a: Account, amount: Amount): Try[Account] = {
+    if (a.balance.amount < amount) Failure(new Exception("Insufficient balance"))
+    else Success(a.copy(balance = Balance(a.balance.amount - amount)))
+  }
+
+  def credit(a: Account, amount: Amount): Try[Account] = 
+    Success(a.copy(balance = Balance(a.balance.amount + amount)))
+
+  def balance(account: Account): Try[Balance] = Success(account.balance)
+}
