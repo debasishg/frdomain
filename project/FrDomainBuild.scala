@@ -8,19 +8,20 @@ object FRDomainProject extends Build
 
   lazy val commonSettings: Seq[Setting[_]] = Seq(
     version := "0.01",
-    scalaVersion := "2.11.1",
-    crossScalaVersions := Seq("2.11.1"),
+    scalaVersion := "2.11.5",
+    crossScalaVersions := Seq("2.11.5"),
 
     scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
   )
 
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
-    // libraryDependencies := Seq(
-      // "joda-time"          % "joda-time"                 % "2.1",
-      // "org.joda"           % "joda-convert"              % "1.3",
-      // "org.scalacheck"    %% "scalacheck"                % "1.11.5"       % "test"
-    // ),
+    libraryDependencies := Seq(
+      "org.scalaz"         % "scalaz-core_2.11"          % "7.1.0",
+      "joda-time"          % "joda-time"                 % "2.1",
+      "org.joda"           % "joda-convert"              % "1.3",
+      "org.scalacheck"    %% "scalacheck"                % "1.11.5"       % "test"
+    ),
     parallelExecution in Test := false,
     publishTo <<= version { (v: String) => 
       val nexus = "https://oss.sonatype.org/" 
