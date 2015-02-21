@@ -17,10 +17,11 @@ object FRDomainProject extends Build
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
     libraryDependencies := Seq(
-      "org.scalaz"         % "scalaz-core_2.11"          % "7.1.0",
-      "joda-time"          % "joda-time"                 % "2.1",
-      "org.joda"           % "joda-convert"              % "1.3",
-      "org.scalacheck"    %% "scalacheck"                % "1.11.5"       % "test"
+      "org.scalaz"         %% "scalaz-core"               % "7.1.0",
+      "org.scalaz"         %% "scalaz-concurrent"         % "7.1.0",
+      "joda-time"          %  "joda-time"                 % "2.1",
+      "org.joda"           %  "joda-convert"              % "1.3",
+      "org.scalacheck"    %%  "scalacheck"                % "1.11.5"       % "test"
     ),
     parallelExecution in Test := false,
     publishTo <<= version { (v: String) => 
