@@ -1,6 +1,8 @@
-package frdomain.ch3
-package monoids.monoid
+package frdomain.ch4
+package patterns
+package monoids.foldable
 
+import scala.language.higherKinds
 import java.util.Date
 
 sealed trait TransactionType
@@ -23,16 +25,16 @@ case class Money(m: Map[Currency, Amount]) {
   def toBaseCurrency: Amount = ???
 }
 
+case class Transaction(txid: String, accountNo: String, date: Date, amount: Money, txnType: TransactionType, status: Boolean)
+
+case class Balance(b: Money)
+
 trait Analytics[Transaction, Balance, Money] {
   def maxDebitOnDay(txns: List[Transaction])(implicit m: Monoid[Money]): Money
   def sumBalances(bs: List[Balance])(implicit m: Monoid[Money]): Money
 }
 
-case class Transaction(txid: String, accountNo: String, date: Date, amount: Money, txnType: TransactionType, status: Boolean)
-
-case class Balance(b: Money)
-
-object Analytics extends Analytics[Transaction, Balance, Money] {
+object Analytics extends Analytics[Transaction, Balance, Money] with Utils {
   import Monoid._
 
   final val baseCurrency = USD
@@ -47,9 +49,10 @@ object Analytics extends Analytics[Transaction, Balance, Money] {
   }
 
   def maxDebitOnDay(txns: List[Transaction])(implicit m: Monoid[Money]): Money = {
-    txns.filter(_.txnType == DR).foldLeft(m.zero) { (a, txn) => m.op(a, valueOf(txn)) }
+    mapReduce(txns.filter(_.txnType == DR))(valueOf)
   }
 
-  def sumBalances(bs: List[Balance])(implicit m: Monoid[Money]): Money = 
-    bs.foldLeft(m.zero) { (a, bal) => m.op(a, creditBalance(bal)) }
+  def sumBalances(bs: List[Balance])(implicit m: Monoid[Money]): Money = { 
+    mapReduce(bs)(creditBalance)
+  }
 }

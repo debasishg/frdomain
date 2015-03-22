@@ -46,7 +46,7 @@ trait CustomerLenses {
 object App extends AddressLenses with CustomerLenses {
   import Lens._
 
-  val a = Address(no = "B12", street = "Monroe Street", city = "Denver", state = "CO", zip = "80231")
+  val a = Address(no = "B-12", street = "Monroe Street", city = "Denver", state = "CO", zip = "80231")
   val c = Customer(12, "John D Cook", a)
 
   val custAddrNoLens = compose(addressLens, noLens)

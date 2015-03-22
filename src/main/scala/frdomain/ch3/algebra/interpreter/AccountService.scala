@@ -15,9 +15,10 @@ object AccountService extends AccountService[Account, Amount, Balance] {
   }
 
   def close(account: Account, closeDate: Option[Date]): Try[Account] = {
-    if (closeDate.getOrElse(today) before account.dateOfOpening) 
-      Failure(new Exception(s"Close date $closeDate cannot be before opening date ${account.dateOfOpening}")) 
-    else Success(account.copy(dateOfClosing = closeDate))
+    val cd = closeDate.getOrElse(today)
+    if (cd before account.dateOfOpening) 
+      Failure(new Exception(s"Close date $cd cannot be before opening date ${account.dateOfOpening}")) 
+    else Success(account.copy(dateOfClosing = Some(cd)))
   }
 
   def debit(a: Account, amount: Amount): Try[Account] = {

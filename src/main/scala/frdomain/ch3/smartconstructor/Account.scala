@@ -32,25 +32,25 @@ object Account {
   def checkingAccount(no: String, name: String, openDate: Option[Date], closeDate: Option[Date], 
     balance: Balance): Try[Account] = { 
 
-    val cd = closeDate.getOrElse(today)
     val od = openDate.getOrElse(today)
+    val cd = closeDate.getOrElse(today)
 
     if (cd before od)
       Failure(new Exception(s"Close date [$cd] cannot be earlier than open date [$od]")) 
-    else Success(CheckingAccount(no, name, openDate, closeDate, balance))
+    else Success(CheckingAccount(no, name, Some(od), Some(cd), balance))
   }
 
   def savingsAccount(no: String, name: String, rate: BigDecimal, openDate: Option[Date], 
     closeDate: Option[Date], balance: Balance): Try[Account] = { 
 
-    val cd = closeDate.getOrElse(today)
     val od = openDate.getOrElse(today)
+    val cd = closeDate.getOrElse(today)
 
     if (cd before od)
       Failure(new Exception(s"Close date [$cd] cannot be earlier than open date [$od]") )
     else if (rate <= BigDecimal(0)) 
       Failure(new Exception(s"Interest rate $rate must be > 0"))
-    else Success(SavingsAccount(no, name, rate, openDate, closeDate, balance))
+    else Success(SavingsAccount(no, name, rate, Some(od), Some(cd), balance))
   }
 }
 

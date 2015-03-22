@@ -1,5 +1,6 @@
-package frdomain.ch3
-package monoids.foldable
+package frdomain.ch4
+package patterns
+package monoids.monoid
 
 trait Monoid[T] {
   def zero: T
