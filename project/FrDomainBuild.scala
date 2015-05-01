@@ -14,14 +14,18 @@ object FRDomainProject extends Build
     scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
   )
 
+  val akkaVersion = "2.3.7"
+
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
     libraryDependencies := Seq(
-      "org.scalaz"         %% "scalaz-core"               % "7.1.0",
-      "org.scalaz"         %% "scalaz-concurrent"         % "7.1.0",
-      "joda-time"          %  "joda-time"                 % "2.1",
-      "org.joda"           %  "joda-convert"              % "1.3",
-      "org.scalacheck"    %%  "scalacheck"                % "1.11.5"       % "test"
+      "org.scalaz"         %% "scalaz-core"                   % "7.1.0",
+      "org.scalaz"         %% "scalaz-concurrent"             % "7.1.0",
+      "joda-time"          %  "joda-time"                     % "2.1",
+      "org.joda"           %  "joda-convert"                  % "1.3",
+      "com.typesafe.akka"  %% "akka-actor"                    % akkaVersion,
+      "com.typesafe.akka"  %  "akka-stream-experimental_2.11" % "1.0-RC2",
+      "org.scalacheck"     %%  "scalacheck"                   % "1.11.5"       % "test"
     ),
     parallelExecution in Test := false,
     publishTo <<= version { (v: String) => 
