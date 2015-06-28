@@ -10,6 +10,18 @@ import scala.collection.immutable._
 import scalaz._
 import Scalaz._
 
+import java.util.{ Date, Calendar }
+
+object common {
+  type Amount = BigDecimal
+
+  def today = Calendar.getInstance.getTime
+}
+
+import common._
+
+case class Account (no: String, name: String, dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, 
+  balance: Balance = Balance(0, Debit)) 
 import common._
 
 sealed trait TransactionType
@@ -66,48 +78,3 @@ object Balance {
 
 object LogSummaryBalance
 
-trait AccountRepository {
-  def query(no: String): Option[Account]
-}
-
-object AccountRepository extends AccountRepository {
-  val m = Map("a-1" -> Account("a-1", "dg", today.some),
-              "a-2" -> Account("a-2", "gh", today.some),
-              "a-3" -> Account("a-3", "tr", today.some)
-          )
-  def query(no: String) = m.get(no)
-}
-
-trait OnlineService {
-  def allAccounts(implicit ec: ExecutionContext): Future[Seq[String]] = Future {
-    Seq("a-1", "a-2", "a-3")
-  }
-
-  def queryAccount(no: String, repo: AccountRepository) = 
-    repo.query(no).getOrElse { throw new RuntimeException("Invalid account number") }
-
-  val txns =
-    Seq(
-      Transaction("t-1", "a-1", Debit, 1000),
-      Transaction("t-2", "a-2", Debit, 1000),
-      Transaction("t-3", "a-3", Credit, 1000),
-      Transaction("t-4", "a-1", Credit, 1000),
-      Transaction("t-5", "a-1", Debit, 1000),
-      Transaction("t-6", "a-2", Debit, 1000),
-      Transaction("t-7", "a-3", Credit, 1000),
-      Transaction("t-8", "a-3", Debit, 1000),
-      Transaction("t-9", "a-2", Credit, 1000),
-      Transaction("t-10", "a-2", Debit, 1000),
-      Transaction("t-11", "a-1", Credit, 1000),
-      Transaction("t-12", "a-3", Debit, 1000)
-    )
-
-  def getBankingTransactions(a: Account) = txns.filter(_.accountNo == a.no)
-  def getSettlementTransactions(a: Account) = txns.filter(_.accountNo == a.no)
-  def validate(t: Transaction) = t
-
-  def allTransactions(implicit ec: ExecutionContext): Future[Seq[Transaction]] = Future { txns }
-
-}
-
-object OnlineService extends OnlineService

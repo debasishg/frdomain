@@ -8,28 +8,31 @@ import akka.util.ByteString
 
 import scala.concurrent.duration._
 
-object Sender extends App with Logging {
-  implicit val system = ActorSystem("sender")
+object FrontOffice extends App with Logging {
+  implicit val system = ActorSystem("front_office")
   val serverConnection = Tcp().outgoingConnection("localhost", 9982)
 
   val path = "/Users/debasishghosh/projects/frdomain/src/main/resources/transactions.csv"
   val getLines = () => scala.io.Source.fromFile(path).getLines()
 
-  val linesSource = Source(getLines).map { line => ByteString(line + "\n") }
-  val logCompleteSink = Sink.onComplete(r => logger.info("Completed with: " + r))
+  val readLines = Source(getLines).filter(isValid).map( l => ByteString(l + "\n"))
+
+  def isValid(line: String) = true
+
+  val logWhenComplete = Sink.onComplete(r => logger.info("Transfer complete: " + r))
 
   val graph = FlowGraph.closed() { implicit b =>
     import FlowGraph.Implicits._
 
     val broadcast = b.add(Broadcast[ByteString](2))
 
-    val logWindowFlow = Flow[ByteString]
+    val heartbeat = Flow[ByteString]
       .groupedWithin(10000, 1.seconds)
-      .map(group => group.map(_.size).foldLeft(0)(_ + _))
+      .map(_.map(_.size).foldLeft(0)(_ + _))
       .map(groupSize => logger.info(s"Sent $groupSize bytes"))
 
-    linesSource ~> broadcast ~> serverConnection ~> logCompleteSink
-                   broadcast ~> logWindowFlow    ~> Sink.ignore
+    readLines ~> broadcast ~> serverConnection ~> logWhenComplete
+                 broadcast ~> heartbeat        ~> Sink.ignore
   }
 
   implicit val mat = ActorFlowMaterializer()

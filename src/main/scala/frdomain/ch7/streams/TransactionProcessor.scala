@@ -16,14 +16,16 @@ class TransactionProcessor(host: String, port: Int)(implicit val system: ActorSy
     val summarizer = system.actorOf(Props[Summarizer])
 
     logger.info(s"Receiver: binding to $host:$port")
+
     Tcp().bind(host, port).runForeach { conn =>
       logger.info(s"Receiver: sender connected (${conn.remoteAddress})")
 
-      val receiveSink = conn.flow
-        .transform(() => Stages.parseLines("\n", 4000))
-        .map(_.split(","))
-        .mapConcat(Transaction(_).toList)
-        .to(Sink(ActorSubscriber[Transaction](summarizer)))
+      val receiveSink = 
+        conn.flow
+            .transform(() => Stages.parseLines("\n", 4000))
+            .map(_.split(","))
+            .mapConcat(Transaction(_).toList)
+            .to(Sink(ActorSubscriber[Transaction](summarizer)))
 
       Source.empty.to(receiveSink).run()
     }
