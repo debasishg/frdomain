@@ -24,7 +24,7 @@ object FRDomainProject extends Build
       "joda-time"                    %  "joda-time"                     % "2.1",
       "org.joda"                     %  "joda-convert"                  % "1.3",
       "com.typesafe.akka"            %% "akka-actor"                    % akkaVersion,
-      "com.typesafe.akka"            %  "akka-stream-experimental_2.11" % "1.0-RC3",
+      "com.typesafe.akka"            %  "akka-stream-experimental_2.11" % "1.0-RC4",
       "com.typesafe.scala-logging"   %% "scala-logging-slf4j"           % "2.1.2",
       "ch.qos.logback"               % "logback-classic"                % "1.1.3",
       "org.scalacheck"               %%  "scalacheck"                   % "1.11.5"       % "test"

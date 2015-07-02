@@ -19,8 +19,8 @@ import Transaction._
 object Main {
   implicit val as = ActorSystem()
   implicit val ec = as.dispatcher
-  val settings = ActorFlowMaterializerSettings(as)
-  implicit val mat = ActorFlowMaterializer(settings)
+  val settings = ActorMaterializerSettings(as)
+  implicit val mat = ActorMaterializer(settings)
 
   /**
    * Create a stream of transactions
@@ -53,7 +53,7 @@ object Main {
    * then materialized to the fold sink "txnSink", which folds each of the transaction
    * substreams to compute the net value of the transaction for that account
    */
-  val netTxn: Source[RunnableFlow[Future[Transaction]], Unit] = 
+  val netTxn: Source[RunnableGraph[Future[Transaction]], Unit] = 
     transactions.map(validate).groupBy(_.accountNo).map { case (a, s) => s.toMat(txnSink)(Keep.right) }
 
   /**

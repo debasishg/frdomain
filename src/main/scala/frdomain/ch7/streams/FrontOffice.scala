@@ -2,7 +2,7 @@ package frdomain.ch7
 package streams
 
 import akka.actor.ActorSystem
-import akka.stream.ActorFlowMaterializer
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
@@ -35,7 +35,7 @@ object FrontOffice extends App with Logging {
                  broadcast ~> heartbeat        ~> Sink.ignore
   }
 
-  implicit val mat = ActorFlowMaterializer()
+  implicit val mat = ActorMaterializer()
   graph.run()
 }
 

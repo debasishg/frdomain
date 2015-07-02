@@ -2,27 +2,28 @@ package frdomain.ch7
 package streams
 
 import akka.actor.{ActorSystem, Props}
-import akka.stream.ActorFlowMaterializer
+import akka.stream.ActorMaterializer
 import akka.stream.actor.ActorSubscriber
+import akka.stream.io.Framing
 import akka.stream.scaladsl.{Tcp, Source, Sink}
+import akka.util.ByteString
 
 import scala.concurrent.duration._
 
 class TransactionProcessor(host: String, port: Int)(implicit val system: ActorSystem) extends Logging {
 
   def run(): Unit = {
-    implicit val mat = ActorFlowMaterializer()
+    implicit val mat = ActorMaterializer()
 
     val summarizer = system.actorOf(Props[Summarizer])
 
     logger.info(s"Receiver: binding to $host:$port")
 
     Tcp().bind(host, port).runForeach { conn =>
-      logger.info(s"Receiver: sender connected (${conn.remoteAddress})")
-
       val receiveSink = 
         conn.flow
-            .transform(() => Stages.parseLines("\n", 4000))
+            .via(Framing.delimiter(ByteString("\n"), maximumFrameLength = 4000, allowTruncation = true)).map(_.utf8String)
+            // .transform(() => Stages.parseLines("\n", 4000))
             .map(_.split(","))
             .mapConcat(Transaction(_).toList)
             .to(Sink(ActorSubscriber[Transaction](summarizer)))
