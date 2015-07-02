@@ -8,24 +8,24 @@ object FRDomainProject extends Build
 
   lazy val commonSettings: Seq[Setting[_]] = Seq(
     version := "0.01",
-    scalaVersion := "2.11.5",
-    crossScalaVersions := Seq("2.11.5"),
+    scalaVersion := "2.11.7",
+    crossScalaVersions := Seq("2.11.7"),
 
     scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
   )
 
-  val akkaVersion = "2.3.7"
+  val akkaVersion = "2.3.9"
 
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
     libraryDependencies := Seq(
-      "org.scalaz"         %% "scalaz-core"                   % "7.1.0",
-      "org.scalaz"         %% "scalaz-concurrent"             % "7.1.0",
-      "joda-time"          %  "joda-time"                     % "2.1",
-      "org.joda"           %  "joda-convert"                  % "1.3",
+      "org.scalaz"         %% "scalaz-core"                   % "7.1.3",
+      "org.scalaz"         %% "scalaz-concurrent"             % "7.1.3",
+      "joda-time"          %  "joda-time"                     % "2.8.1",
+      "org.joda"           %  "joda-convert"                  % "1.7",
       "com.typesafe.akka"  %% "akka-actor"                    % akkaVersion,
-      "com.typesafe.akka"  %  "akka-stream-experimental_2.11" % "1.0-RC2",
-      "org.scalacheck"     %%  "scalacheck"                   % "1.11.5"       % "test"
+      "com.typesafe.akka"  %  "akka-stream-experimental_2.11" % "1.0-RC4",
+      "org.scalacheck"     %%  "scalacheck"                   % "1.12.4"       % "test"
     ),
     parallelExecution in Test := false,
     publishTo <<= version { (v: String) => 

@@ -19,8 +19,8 @@ import Transaction._
 object Main {
   implicit val as = ActorSystem()
   implicit val ec = as.dispatcher
-  val settings = ActorFlowMaterializerSettings(as)
-  implicit val mat = ActorFlowMaterializer(settings)
+  val settings = ActorMaterializerSettings(as)
+  implicit val mat = ActorMaterializer(settings)
 
   /**
    * Create a stream of transactions
@@ -34,10 +34,10 @@ object Main {
   /**
    * Would like to fold transactions through monoid append
    */
-  val txnSink: Sink[Transaction, Future[Transaction]] = 
+  val txnSink: Sink[Transaction, Future[Transaction]] =
     Sink.fold[Transaction, Transaction](TransactionMonoid.zero)(_ |+| _)
 
-  val netTxnSink: Sink[Transaction, Future[Map[String, Transaction]]] = { 
+  val netTxnSink: Sink[Transaction, Future[Map[String, Transaction]]] = {
     Sink.fold[Map[String, Transaction], Transaction](Map.empty[String, Transaction]) { (acc, t) => acc |+| Map(t.accountNo -> t) }
   }
 
@@ -53,7 +53,7 @@ object Main {
    * then materialized to the fold sink "txnSink", which folds each of the transaction
    * substreams to compute the net value of the transaction for that account
    */
-  val netTxn: Source[RunnableFlow[Future[Transaction]], Unit] = 
+  val netTxn: Source[RunnableGraph[Future[Transaction]], Unit] =
     transactions.map(validate).groupBy(_.accountNo).map { case (a, s) => s.toMat(txnSink)(Keep.right) }
 
   /**
