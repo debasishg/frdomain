@@ -16,7 +16,7 @@ object Functor {
   }
 
   implicit def OptionFunctor: Functor[Option] = new Functor[Option] {
-    def map[A, B](a: Option[A])(f: A => B): Option[B] = a.map(f).orElse(None)
+    def map[A, B](a: Option[A])(f: A => B): Option[B] = a map f
   }
 
   implicit def Tuple2Functor[A1]: Functor[({type f[x] = (A1, x)})#f] = new Functor[({type f[x] = (A1, x)})#f] {
