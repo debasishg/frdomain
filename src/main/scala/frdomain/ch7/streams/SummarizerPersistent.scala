@@ -1,7 +1,7 @@
 package frdomain.ch7
 package streams
 
-import akka.actor.Actor
+import akka.persistence.PersistentActor
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorSubscriber, MaxInFlightRequestStrategy}
 
@@ -10,8 +10,10 @@ import scala.collection.mutable.{ Map => MMap }
 import scalaz._
 import Scalaz._
 
-class Summarizer extends Actor with ActorSubscriber with Logging {
+class SummarizerPersistent extends PersistentActor with ActorSubscriber with Logging {
   private val balance = MMap.empty[String, Balance]
+
+  override def persistenceId = "transaction-netter"
 
   private var inFlight = 0
 
@@ -19,13 +21,19 @@ class Summarizer extends Actor with ActorSubscriber with Logging {
     override def inFlightInternally = inFlight
   }
 
-  def receive = {
+  def receiveCommand = {
     case OnNext(data: Transaction) =>
       inFlight += 1
-      updateBalance(data)
-      inFlight -= 1
+      persistAsync(data) { _ =>
+        updateBalance(data)
+        inFlight -= 1
+      }
 
     case LogSummaryBalance => logger.info("Balance so far: " + balance)
+  }
+
+  def receiveRecover = {
+    case d: Transaction => updateBalance(d)
   }
 
   def updateBalance(data: Transaction) = balance.get(data.accountNo).fold { 
@@ -34,5 +42,6 @@ class Summarizer extends Actor with ActorSubscriber with Logging {
     balance += ((data.accountNo, b |+| Balance(data.amount, data.debitCredit)))
   }
 }
+
 
 

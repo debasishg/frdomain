@@ -43,6 +43,17 @@ object Transaction {
     this(fields(0), fields(1), fields(2), BigDecimal(fields(3)))  // @todo: exception handling
   }
 
+/*
+  def apply(fields: Array[String]): Future[Transaction] = {
+    this(fields(0), fields(1), fields(2), BigDecimal(fields(3))) match {  // @todo: exception handling
+      case Some(t) => validate(t)
+      case None => Future.failed(new Exception("Validation failed for transaction"))
+    }
+  }
+*/
+
+  def validate(t: Transaction): Future[Transaction] = Future.successful(t)
+
   def apply(id: String, accountNo: String, t: String, amount: Amount): Option[Transaction] = TransactionType(t) match {
     case None    => None
     case Some(d) => Some(Transaction(id, accountNo, d, amount, today))
