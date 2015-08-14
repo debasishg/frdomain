@@ -1,15 +1,22 @@
 package frdomain.ch4
 package trading
 
-import java.util.Date
+import java.util.{ Date, Calendar }
 
 trait OrderModel {this: RefModel =>
   case class LineItem(ins: Instrument, qty: BigDecimal, price: BigDecimal)
   case class Order(no: String, date: Date, customer: Customer, items: List[LineItem])
 
-  case class ClientOrder(details: Map[String, String])
+  type ClientOrder = Map[String, String]
 
-  def fromClientOrders: ClientOrder => List[Order] = { cos =>
-    List(Order("123", today, "abc", List.empty[LineItem]))
+  def fromClientOrders: List[ClientOrder] => List[Order] = { cos =>
+    cos map {co =>
+      val ins = co("instrument").split("-")
+      val lineItems = ins map {in =>
+        val arr = in.split("/")
+        LineItem(arr(0), BigDecimal(arr(1)), BigDecimal(arr(2)))
+      }
+      Order(co("no"), Calendar.getInstance.getTime, co("customer"), lineItems.toList)
+    }
   }
 }

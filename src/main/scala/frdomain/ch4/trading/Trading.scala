@@ -6,7 +6,7 @@ import Scalaz._
 
 trait Trading[Account, Trade, ClientOrder, Order, Execution, Market] {
 
-  def clientOrders: Kleisli[List, ClientOrder, Order]
+  def clientOrders: Kleisli[List, List[ClientOrder], Order]
   def execute(market: Market, brokerAccount: Account): Kleisli[List, Order, Execution]
   def allocate(accounts: List[Account]): Kleisli[List, Execution, Trade]
 

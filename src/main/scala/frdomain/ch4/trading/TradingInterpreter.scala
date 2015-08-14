@@ -10,7 +10,7 @@ import TradeModel._
 
 trait TradingInterpreter extends Trading[Account, Trade, ClientOrder, Order, Execution, Market] {
 
-  def clientOrders: Kleisli[List, ClientOrder, Order] = kleisli(fromClientOrders)
+  def clientOrders: Kleisli[List, List[ClientOrder], Order] = kleisli(fromClientOrders)
 
   def execute(market: Market, brokerAccount: Account) = kleisli[List, Order, Execution] { order =>
     order.items.map { item =>
