@@ -2,7 +2,7 @@ package frdomain.ch8
 package cqrs
 package memrepo
 
-import java.util.Date
+import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
@@ -13,20 +13,24 @@ import \/._
 import collection.concurrent.TrieMap
 
 import common._
+import spray.json._
+import JSONProtocols._
 
 trait Event[+Next] {
-  def at: Date
+  def at: DateTime
 }
 
-case class Opened[Next](no: String, name: String, openingDate: Option[Date], at: Date = today, 
+case class Opened[Next](no: String, name: String, openingDate: Option[DateTime], at: DateTime = today, 
   onInit: Account => Next) extends Event[Next]
-case class Closed[Next](no: String, closeDate: Option[Date], at: Date = today, onClose: Account => Next) extends Event[Next]
-case class Debited[Next](no: String, amount: Amount, at: Date = today, onDebit: Account => Next) extends Event[Next]
-case class Credited[Next](no: String, amount: Amount, at: Date = today, onCredit: Account => Next) extends Event[Next]
+case class Closed[Next](no: String, closeDate: Option[DateTime], at: DateTime = today, 
+  onClose: Account => Next) extends Event[Next]
+case class Debited[Next](no: String, amount: Amount, at: DateTime = today, onDebit: Account => Next) extends Event[Next]
+case class Credited[Next](no: String, amount: Amount, at: DateTime = today, onCredit: Account => Next) extends Event[Next]
 
 object Event {
 
   val eventLog = TrieMap[String, List[Event[_]]]() 
+  val eventLogJson = TrieMap[String, List[String]]()
 
   implicit def functor: Functor[Event] = new Functor[Event] {
     override def map[A, B](fa: Event[A])(f: (A) => B): Event[B] = fa match {
@@ -61,6 +65,9 @@ object Event {
 
   def snapshot(es: List[Event[_]]): String \/ Map[String, Account] = 
     es.reverse.foldLeft(Map.empty[String, Account]) { (a, e) => updateState(e, a) }.right
+
+  def snapshotFromJson(es: List[String]): String \/ Map[String, Account] = 
+    es.reverse.foldLeft(Map.empty[String, Account]) { (a, e) => updateState(e.parseJson.convertTo[Event[_]], a) }.right
 }
 
 object Commands extends Commands {
@@ -70,8 +77,8 @@ object Commands extends Commands {
     if (a.dateOfClosing isDefined) s"Account ${a.no} is closed".left
     else a.right
 
-  def beforeOpeningDate(a: Account, cd: Option[Date]): Error \/ Account =
-    if (a.dateOfOpening before cd.getOrElse(today)) 
+  def beforeOpeningDate(a: Account, cd: Option[DateTime]): Error \/ Account =
+    if (a.dateOfOpening isBefore cd.getOrElse(today)) 
       s"Cannot close at a date earlier than opening date ${a.dateOfOpening}".left
     else a.right
 
@@ -79,7 +86,7 @@ object Commands extends Commands {
     if (a.balance.amount < amount) s"insufficient fund to debit $amount from ${a.no}".left
     else a.right
 
-  def validateClose(no: String, cd: Option[Date]) = for {
+  def validateClose(no: String, cd: Option[DateTime]) = for {
     l <- events(no)
     s <- snapshot(l)
     a <- closed(s(no))
@@ -98,21 +105,30 @@ object Commands extends Commands {
     s <- snapshot(l)
     _ <- closed(s(no))
   } yield s
+
+  def validateOpen(no: String) =
+    eventLog.get(no)
+            .map { _ => s"Account with no = $no already exists".left }
+            .getOrElse(no.right)
+    
     
   def handleCommand[A](e: Event[A]) = e match {
 
-    case o @ Opened(no, name, odate, _, onInit) => eventLog.get(no)
-      .map { _ => fail(new RuntimeException(s"Account with no = $no already exists")) }
-      .getOrElse {
+    case o @ Opened(no, name, odate, _, onInit) => validateOpen(no).fold(
+      err => fail(new RuntimeException(err)),
+      _   => now {
         val a = Account(no, name, odate.get)
         eventLog += (no -> List(o))
-        now(onInit(a))
+        eventLogJson += (no -> List(OpenedFormat.write(o).toString))
+        onInit(a)
       }
+    )
 
     case c @ Closed(no, cdate, _, onClose) => validateClose(no, cdate).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (c :: eventLog.getOrElse(no, Nil)))
+        eventLogJson += (no -> (ClosedFormat.write(c).toString :: eventLogJson.getOrElse(no, Nil)))
         onClose(updateState(c, currentState)(no))
       }
     )
@@ -121,6 +137,7 @@ object Commands extends Commands {
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (d :: eventLog.getOrElse(no, Nil)))
+        eventLogJson += (no -> (DebitedFormat.write(d).toString :: eventLogJson.getOrElse(no, Nil)))
         onDebit(updateState(d, currentState)(no))
       }
     )
@@ -129,6 +146,7 @@ object Commands extends Commands {
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (r :: eventLog.getOrElse(no, Nil)))
+        eventLogJson += (no -> (CreditedFormat.write(r).toString :: eventLogJson.getOrElse(no, Nil)))
         onCredit(updateState(r, currentState)(no))
       }
     )
@@ -143,8 +161,8 @@ trait Commands {
 
   private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftF(event)
 
-  def open(no: String, name: String, openingDate: Option[Date]): Command[Account] = Opened(no, name, openingDate, today, identity)
-  def close(no: String, closeDate: Option[Date]): Command[Account] = Closed(no, closeDate, today, identity)
+  def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = Opened(no, name, openingDate, today, identity)
+  def close(no: String, closeDate: Option[DateTime]): Command[Account] = Closed(no, closeDate, today, identity)
   def debit(no: String, amount: Amount): Command[Account] = Debited(no, amount, today, identity)
   def credit(no: String, amount: Amount): Command[Account] = Credited(no, amount, today, identity)
 }

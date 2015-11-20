@@ -21,13 +21,14 @@ object FRDomainProject extends Build
     libraryDependencies := Seq(
       "org.scalaz"                   %% "scalaz-core"                   % "7.1.0",
       "org.scalaz"                   %% "scalaz-concurrent"             % "7.1.0",
-      "joda-time"                    %  "joda-time"                     % "2.1",
-      "org.joda"                     %  "joda-convert"                  % "1.3",
+      "joda-time"                    %  "joda-time"                     % "2.9.1",
+      "org.joda"                     %  "joda-convert"                  % "1.8.1",
+      "io.spray"                     %% "spray-json"                    % "1.3.2",
       "com.typesafe.akka"            %% "akka-actor"                    % akkaVersion,
       "com.typesafe.akka"            %% "akka-persistence-experimental" % akkaVersion,
       "com.typesafe.akka"            %  "akka-stream-experimental_2.11" % "1.0-RC4",
       "com.typesafe.scala-logging"   %% "scala-logging-slf4j"           % "2.1.2",
-      "ch.qos.logback"               % "logback-classic"                % "1.1.3",
+      "ch.qos.logback"               %  "logback-classic"               % "1.1.3",
       "org.scalacheck"               %%  "scalacheck"                   % "1.11.5"       % "test"
     ),
     parallelExecution in Test := false,
