@@ -2,7 +2,7 @@ package frdomain.ch8
 package cqrs
 package service
 
-import java.util.Date
+import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
@@ -10,16 +10,18 @@ import Task._
 import Free._
 import \/._
 
-import collection.concurrent.TrieMap
-import lib._
+import cqrs.lib._
 
 import common._
+import spray.json._
+import JSONProtocols._
 
-case class Opened[Next](no: String, name: String, openingDate: Option[Date], at: Date = today, 
+case class Opened[Next](no: String, name: String, openingDate: Option[DateTime], at: DateTime = today, 
   onInit: Account => Next) extends Event[Next]
-case class Closed[Next](no: String, closeDate: Option[Date], at: Date = today, onClose: Account => Next) extends Event[Next]
-case class Debited[Next](no: String, amount: Amount, at: Date = today, onDebit: Account => Next) extends Event[Next]
-case class Credited[Next](no: String, amount: Amount, at: Date = today, onCredit: Account => Next) extends Event[Next]
+case class Closed[Next](no: String, closeDate: Option[DateTime], at: DateTime = today, 
+  onClose: Account => Next) extends Event[Next]
+case class Debited[Next](no: String, amount: Amount, at: DateTime = today, onDebit: Account => Next) extends Event[Next]
+case class Credited[Next](no: String, amount: Amount, at: DateTime = today, onCredit: Account => Next) extends Event[Next]
 
 object Event {
 
@@ -58,17 +60,24 @@ trait AccountCommands extends Commands[Account] {
 
   private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftF(event)
 
-  def open(no: String, name: String, openingDate: Option[Date]): Command[Account] = Opened(no, name, openingDate, today, identity)
-  def close(no: String, closeDate: Option[Date]): Command[Account] = Closed(no, closeDate, today, identity)
-  def debit(no: String, amount: Amount): Command[Account] = Debited(no, amount, today, identity)
-  def credit(no: String, amount: Amount): Command[Account] = Credited(no, amount, today, identity)
+  def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = 
+    Opened(no, name, openingDate, today, identity)
+  def close(no: String, closeDate: Option[DateTime]): Command[Account] = 
+    Closed(no, closeDate, today, identity)
+  def debit(no: String, amount: Amount): Command[Account] = 
+    Debited(no, amount, today, identity)
+  def credit(no: String, amount: Amount): Command[Account] = 
+    Credited(no, amount, today, identity)
 }
 
 object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
   import Event._
   import AccountSnapshot._
 
-  val eventLog = InMemoryEventStore.apply[String]
+  // val eventLog = InMemoryEventStore.apply[String]
+  val eventLog = new InMemoryJSONEventStore {
+    val eventJsonFormat = EventFormat
+  }.apply[String]
 
   import eventLog._
 
@@ -78,8 +87,8 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
     if (a.dateOfClosing isDefined) s"Account ${a.no} is closed".left
     else a.right
 
-  private def beforeOpeningDate(a: Account, cd: Option[Date]): Error \/ Account =
-    if (a.dateOfOpening before cd.getOrElse(today)) 
+  private def beforeOpeningDate(a: Account, cd: Option[DateTime]): Error \/ Account =
+    if (a.dateOfOpening isBefore cd.getOrElse(today)) 
       s"Cannot close at a date earlier than opening date ${a.dateOfOpening}".left
     else a.right
 
@@ -87,7 +96,7 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
     if (a.balance.amount < amount) s"insufficient fund to debit $amount from ${a.no}".left
     else a.right
 
-  private def validateClose(no: String, cd: Option[Date]) = for {
+  private def validateClose(no: String, cd: Option[DateTime]) = for {
     l <- events(no)
     s <- snapshot(l)
     a <- closed(s(no))
@@ -107,15 +116,22 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
     _ <- closed(s(no))
   } yield s
     
+  def validateOpen(no: String) = {
+    val events = eventLog.get(no)
+    if (events nonEmpty) s"Account with no = $no already exists".left
+    else no.right
+  }
+
   private def handleCommand[A](e: Event[A]) = e match {
 
-    case o @ Opened(no, name, odate, _, onInit) => 
-      val events = eventLog.get(no)
-      if (events isEmpty) {
+    case o @ Opened(no, name, odate, _, onInit) => validateOpen(no).fold(
+      err => fail(new RuntimeException(err)),
+      _   => now {
         val a = Account(no, name, odate.get)
         eventLog.put(no, o)
-        now(onInit(a))
-      } else fail(new RuntimeException(s"Account with no = $no already exists"))
+        onInit(a)
+      }
+    )
 
     case c @ Closed(no, cdate, _, onClose) => validateClose(no, cdate).fold(
       err => fail(new RuntimeException(err)),
@@ -166,15 +182,3 @@ object Scripts extends AccountCommands {
       d <- debit(a.no, 50000)
     } yield d
 }
-
-/*
-object Projections {
-  import EventLog._
-  import AccountSnapshot._
-
-  def balance(no: String) = for {
-    l <- events(no)
-    s <- snapshot(l)
-  } yield s(no).balance
-}
-*/

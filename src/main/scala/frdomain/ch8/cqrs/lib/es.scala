@@ -1,7 +1,7 @@
 package frdomain.ch8
 package cqrs.lib
 
-import java.util.Date
+import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
@@ -18,7 +18,7 @@ import Common._
  * The `Event` abstraction. `Next` points to the next event in chain
  */
 trait Event[+Next] {
-  def at: Date
+  def at: DateTime
 }
 
 /**
