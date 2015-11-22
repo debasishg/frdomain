@@ -6,6 +6,7 @@ import scalaz._
 import Scalaz._
 
 import org.joda.time.DateTime
+import cqrs.lib.Aggregate
 
 object common {
   type Amount = BigDecimal
@@ -19,7 +20,8 @@ import common._
 case class Balance(amount: Amount = 0)
 
 case class Account(no: String, name: String, dateOfOpening: DateTime = today, dateOfClosing: Option[DateTime] = None, 
-  balance: Balance = Balance(0)) {
+  balance: Balance = Balance(0)) extends Aggregate {
+  def id = no
   def isClosed = dateOfClosing.isDefined
 }
 

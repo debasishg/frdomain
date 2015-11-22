@@ -28,7 +28,7 @@ trait Aggregate {
   def id: AggregateId
 }
 
-trait Snapshot[A] {
+trait Snapshot[A <: Aggregate] {
   def updateState(e: Event[_], initial: Map[String, A]): Map[String, A]
 
   def snapshot(es: List[Event[_]]): String \/ Map[String, A] = 

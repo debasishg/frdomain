@@ -13,8 +13,6 @@ import \/._
 import cqrs.lib._
 
 import common._
-import spray.json._
-import JSONProtocols._
 
 case class Opened[Next](no: String, name: String, openingDate: Option[DateTime], at: DateTime = today, 
   onInit: Account => Next) extends Event[Next]
@@ -73,6 +71,8 @@ trait AccountCommands extends Commands[Account] {
 object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
   import Event._
   import AccountSnapshot._
+  import spray.json._
+  import JSONProtocols._
 
   // val eventLog = InMemoryEventStore.apply[String]
   val eventLog = new InMemoryJSONEventStore {

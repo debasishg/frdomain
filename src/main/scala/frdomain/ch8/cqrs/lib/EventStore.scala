@@ -23,6 +23,11 @@ trait EventStore[K] {
    * similar to `get` but returns an error if the `key` is not found
    */
   def events(key: K): Error \/ List[Event[_]]
+  
+  /**
+   * get all ids from the event store
+   */
+  def allEvents: Error \/ List[Event[_]]
 }
 
 /**
@@ -39,10 +44,11 @@ object InMemoryEventStore {
       event.right
     }
     def events(key: K): Error \/ List[Event[_]] = {
-      val currentList = eventLog.getOrElse(no, Nil)
-      if (currentList.isEmpty) s"Aggregate $no does not exist".left
+      val currentList = eventLog.getOrElse(key, Nil)
+      if (currentList.isEmpty) s"Aggregate $key does not exist".left
       else currentList.right
     }
+    def allEvents: Error \/ List[Event[_]] = eventLog.values.toList.flatten.right
   }
 }
       
@@ -63,10 +69,11 @@ trait InMemoryJSONEventStore {
       event.right
     }
     def events(key: K): Error \/ List[Event[_]] = {
-      val currentList = eventLog.getOrElse(no, Nil)
-      if (currentList.isEmpty) s"Aggregate $no does not exist".left
+      val currentList = eventLog.getOrElse(key, Nil)
+      if (currentList.isEmpty) s"Aggregate $key does not exist".left
       else currentList.map(js => js.parseJson.convertTo[Event[_]]).right
     }
+    def allEvents: Error \/ List[Event[_]] = eventLog.values.toList.flatten.map(_.parseJson.convertTo[Event[_]]).right
   }
 }
       
