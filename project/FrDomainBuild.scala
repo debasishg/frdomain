@@ -28,6 +28,9 @@ object FRDomainProject extends Build
       "com.typesafe.akka"            %% "akka-persistence-experimental" % akkaVersion,
       "com.typesafe.akka"            %  "akka-stream-experimental_2.11" % "1.0-RC4",
       "com.typesafe.scala-logging"   %% "scala-logging-slf4j"           % "2.1.2",
+      "com.typesafe.slick"           %% "slick"                         % "3.0.0",
+      "com.h2database"                % "h2"                            % "1.4.187",
+      "com.zaxxer"                    % "HikariCP-java6"                % "2.3.8",
       "ch.qos.logback"               %  "logback-classic"               % "1.1.3",
       "org.scalacheck"               %%  "scalacheck"                   % "1.11.5"       % "test"
     ),
