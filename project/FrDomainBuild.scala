@@ -11,7 +11,7 @@ object FRDomainProject extends Build
     scalaVersion := "2.11.7",
     crossScalaVersions := Seq("2.11.7"),
 
-    scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
+    scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation", "-language:higherKinds" )
   )
 
   val akkaVersion = "2.3.11"
@@ -19,8 +19,8 @@ object FRDomainProject extends Build
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
     libraryDependencies := Seq(
-      "org.scalaz"                   %% "scalaz-core"                   % "7.1.0",
-      "org.scalaz"                   %% "scalaz-concurrent"             % "7.1.0",
+      "org.scalaz"                   %% "scalaz-core"                   % "7.2.0",
+      "org.scalaz"                   %% "scalaz-concurrent"             % "7.2.0",
       "joda-time"                    %  "joda-time"                     % "2.9.1",
       "org.joda"                     %  "joda-convert"                  % "1.8.1",
       "io.spray"                     %% "spray-json"                    % "1.3.2",
