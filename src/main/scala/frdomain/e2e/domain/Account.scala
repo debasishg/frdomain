@@ -8,27 +8,12 @@ import Scalaz._
 import Common._
 
 /**
- * Base abstraction for `Account`
- */
-sealed trait Account {
-  def no: String
-  def name: String
-  def dateOpened: DateTime
-  def dateClosed: Option[DateTime]
-  def currency: Currency
-  def minBalanceRequired: Amount
-
-  def isClosed = dateClosed isDefined
-}
-
-/**
  * Make case classes private : we will allow access through smart constructors only
  */
-final case class CheckingAccount private[domain] (no: String, name: String,
-  dateOpened: DateTime, dateClosed: Option[DateTime] = None, currency: Currency, minBalanceRequired: Amount) extends Account
-
-final case class SavingsAccount private[domain] (no: String, name: String, rateOfInterest: Amount, 
-  dateOpened: DateTime, dateClosed: Option[DateTime] = None, currency: Currency, minBalanceRequired: Amount) extends Account
+final case class Account (no: String, name: String, rateOfInterest: Option[Amount], 
+  dateOpened: DateTime, dateClosed: Option[DateTime] = None, currency: Currency, minBalanceRequired: Amount) {
+  def isClosed = dateClosed.isDefined
+} 
 
 object Account {
   /** 
@@ -46,32 +31,24 @@ object Account {
     if (minBalance < 0) s"Minimum balance required ($minBalance) must be >= 0".failureNel
     else minBalance.success
 
-  def validRateOfInterest(rate: Amount) =
+  def validRateOfInterest(rateOfInterest: Option[Amount]) = rateOfInterest.map { rate =>
     if (rate < 0) s"Rate of interest required ($rate) must be >= 0".failureNel
     else if (rate > 3.5) s"Rate of interest required ($rate) must be < 3.5".failureNel
-    else rate.success
+    else rate.some.success
+  }.getOrElse { None.success }
 
   /**
    * Smart constructor for checking account. Note we use Validation as an applicative and report
    * all validation failures at a time.
    */
-  def checkingAccount(no: String, name: String, openDate: DateTime, ccy: Currency, 
-    minBalanceRequired: Amount = ZERO): ValidationNel[Error, Account] = 
-    (validNo(no) |@| validOpenDate(openDate) |@| validMinBalance(minBalanceRequired)) { (n, o, m) =>
-      CheckingAccount(n, name, o, None, ccy, m)
-    }
-
-  def savingsAccount(no: String, name: String, rate: Amount, openDate: DateTime, ccy: Currency, 
+  def account(no: String, name: String, rate: Option[Amount], openDate: DateTime, ccy: Currency, 
     minBalanceRequired: Amount = ZERO): ValidationNel[Error, Account] = 
     (validNo(no) |@| validOpenDate(openDate) |@| validMinBalance(minBalanceRequired) |@| validRateOfInterest(rate)) { (n, o, m, r) =>
-      SavingsAccount(n, name, r, o, None, ccy, m)
+      Account(n, name, r, o, None, ccy, m)
     }
 
-  def close(account: Account, date: DateTime): ValidationNel[Error, Account] =
-    if (account.isClosed) s"Account (${account.no}) is already closed".failureNel
-    else if (date isBefore account.dateOpened) s"Account closing date ($date) has to be >= Open date".failureNel
-    else account match {
-      case CheckingAccount(no, name, dopen, _, ccy, min) => CheckingAccount(no, name, dopen, date.some, ccy, min).success
-      case SavingsAccount(no, name, rate, dopen, _, ccy, min) => SavingsAccount(no, name, rate, dopen, date.some, ccy, min).success
-    }
+  def close(account: Account, date: DateTime): ErrorOr[Account] =
+    if (account.isClosed) s"Account (${account.no}) is already closed".left
+    else if (date isBefore account.dateOpened) s"Account closing date ($date) has to be >= Open date".left
+    else account.copy(dateClosed = date.some).right
 }

@@ -15,13 +15,10 @@ import Common._
 trait AccountService[M[+_]] {
   implicit def M: Monad[M]
 
-  def openCheckingAccount(no: String, name: String, dateOpened: DateTime = today, ccy: Currency, 
+  def openAccount(no: String, name: String, rate: Option[Amount], dateOpened: DateTime = today, ccy: Currency, 
     minBalance: Amount = ZERO): Kleisli[M, AccountRepository[M], Account]
 
-  def openSavingsAccount(no: String, name: String, rate: Amount, dateOpened: DateTime = today, ccy: Currency, 
-    minBalance: Amount = ZERO): Kleisli[M, AccountRepository[M], Account]
-
-  def close(a: Account, date: DateTime): Kleisli[M, AccountRepository[M], Account]
+  def closeAccount(a: Account, date: DateTime): Kleisli[M, AccountRepository[M], Account]
 
   def deposit(accountNo: String, amount: Amount, on: DateTime): Kleisli[M, AccountRepository[M], AccountBalance]
   def withdraw(accountNo: String, amount: Amount, on: DateTime): Kleisli[M, AccountRepository[M], AccountBalance]
@@ -31,34 +28,21 @@ trait AccountService[M[+_]] {
 class AccountServiceDefaultImpl extends AccountService[ErrorOr] {
   val M: Monad[ErrorOr] = Monad[ErrorOr]
 
-  def openCheckingAccount(no: String, name: String, dateOpened: DateTime = today, ccy: Currency, 
+  def openAccount(no: String, name: String, rate: Option[Amount], dateOpened: DateTime = today, ccy: Currency, 
     minBalance: Amount = ZERO): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] = 
-    Kleisli { repo: AccountRepository[ErrorOr] =>
-      Account.checkingAccount(no, name, dateOpened, ccy, minBalance) match {
+    kleisliU { repo: AccountRepository[ErrorOr] =>
+      Account.account(no, name, rate, dateOpened, ccy, minBalance) match {
         case Success(a) => repo.store(a)
         case Failure(errs) => errs.list.toList.mkString("/").left
       }
     }
 
-  def openSavingsAccount(no: String, name: String, rate: Amount, dateOpened: DateTime = today, ccy: Currency, 
-    minBalance: Amount = ZERO): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] = 
-    Kleisli { repo: AccountRepository[ErrorOr] =>
-      Account.savingsAccount(no, name, rate, dateOpened, ccy, minBalance) match {
-        case Success(a) => repo.store(a)
-        case Failure(errs) => errs.list.toList.mkString("/").left
-      }
-    }
-
-  def close(a: Account, date: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] =
-    Kleisli { repo: AccountRepository[ErrorOr] =>
-      repo.query(a.no) match {
-        case \/-(a) =>
-          Account.close(a, date) match {
-            case Success(a) => repo.store(a)
-            case Failure(errs) => errs.list.toList.mkString("/").left
-          }
-        case -\/(err) => err.left
-      }
+  def closeAccount(a: Account, date: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] =
+    kleisliU { repo: AccountRepository[ErrorOr] =>
+      for {
+        a <- repo.query(a.no)
+        b <- Account.close(a, date)
+      } yield b
     }
 
   def deposit(accountNo: String, amount: Amount, on: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], AccountBalance] =
@@ -87,3 +71,5 @@ class AccountServiceDefaultImpl extends AccountService[ErrorOr] {
       } yield b
     }
 }
+
+object AccountService extends AccountServiceDefaultImpl

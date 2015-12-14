@@ -32,6 +32,7 @@ object FRDomainProject extends Build
       "com.h2database"                % "h2"                            % "1.4.187",
       "com.zaxxer"                    % "HikariCP-java6"                % "2.3.8",
       "ch.qos.logback"               %  "logback-classic"               % "1.1.3",
+      "com.github.tototoshi"         %% "slick-joda-mapper"             % "2.0.0",
       "org.scalacheck"               %%  "scalacheck"                   % "1.11.5"       % "test"
     ),
     parallelExecution in Test := false,

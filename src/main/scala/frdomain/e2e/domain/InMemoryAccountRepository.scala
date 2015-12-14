@@ -43,18 +43,18 @@ class InMemoryAccountRepository extends AccountRepository[ErrorOr] {
     brepo.get((account.no, asOn.toLocalDate)).map { oldBalance =>
       val newBalance = oldBalance |+| m
       val r = brepo.replace((account.no, asOn.toLocalDate), oldBalance, newBalance)
-      if (r) AccountBalance.accountBalance(account, newBalance.some, asOn.toLocalDate)
+      if (r) AccountBalance(None, account.no, newBalance.amount(account.currency), account.currency, asOn.toLocalDate).right
       else s"Balance update failed : could not get lock on Map".left
     }.getOrElse {
       brepo += (((account.no, asOn.toLocalDate), m))
-      AccountBalance.accountBalance(account, m.some, asOn.toLocalDate)
+      AccountBalance(None, account.no, m.amount(account.currency), account.currency, asOn.toLocalDate).right
     }
   }
 
   def balance(account: Account, asOn: DateTime): ErrorOr[AccountBalance] =
     brepo.get((account.no, asOn.toLocalDate))
-         .map { b => AccountBalance.accountBalance(account, b.some, asOn.toLocalDate) }
-         .getOrElse { AccountBalance.accountBalance(account, None, asOn.toLocalDate) }
+         .map { b => AccountBalance(None, account.no, b.amount(account.currency), account.currency, asOn.toLocalDate).right }
+         .getOrElse { AccountBalance(None, account.no, ZERO, account.currency, asOn.toLocalDate).right }
 }
 
 object InMemoryAccountRepository extends InMemoryAccountRepository
