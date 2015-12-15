@@ -9,7 +9,7 @@ import Kleisli._
 import Common._
 
 object App {
-  import AccountService._
+  import AccountServiceBlocking._
 
   val setup1 =
   for {

@@ -1,6 +1,8 @@
 package frdomain.e2e
 package domain
 
+import scala.concurrent.Future
+
 import scalaz._
 import Scalaz._
 
@@ -11,6 +13,7 @@ object Common {
   type Amount = BigDecimal
   def today = DateTime.now()
   type ErrorOr[+A] = String \/ A
+  type Valid[A] = EitherT[Future, NonEmptyList[String], A]
 
   final val ZERO = BigDecimal(0)
 
