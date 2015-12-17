@@ -13,7 +13,8 @@ object Common {
   type Amount = BigDecimal
   def today = DateTime.now()
   type ErrorOr[+A] = String \/ A
-  type Valid[A] = EitherT[Future, NonEmptyList[String], A]
+  // type Valid[+A] = Future[Option[A]]
+  // type Valid[A] = EitherT[Option, NonEmptyList[String], A]
 
   final val ZERO = BigDecimal(0)
 

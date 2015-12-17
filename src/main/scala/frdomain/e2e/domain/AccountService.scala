@@ -17,7 +17,7 @@ trait AccountService[M[+_]] {
   def openAccount(no: String, name: String, rate: Option[Amount], dateOpened: DateTime = today, ccy: Currency, 
     minBalance: Amount = ZERO): Kleisli[M, AccountRepository[M], Account]
 
-  def closeAccount(a: Account, date: DateTime): Kleisli[M, AccountRepository[M], Account]
+  def closeAccount(no: String, date: DateTime): Kleisli[M, AccountRepository[M], Account]
 
   def deposit(accountNo: String, amount: Amount, on: DateTime): Kleisli[M, AccountRepository[M], AccountBalance]
   def withdraw(accountNo: String, amount: Amount, on: DateTime): Kleisli[M, AccountRepository[M], AccountBalance]

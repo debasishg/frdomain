@@ -15,7 +15,7 @@ import Common._
 trait AccountRepository[M[+_]] {
   implicit def M: Monad[M]
   
-  def query(accountNo: String): M[Account]
+  def query(accountNo: String): M[Option[Account]]
   def store(a: Account): M[Account]
   def update(a: Account): M[Account]
   def accountsOpenedOn(date: DateTime): M[List[Account]]

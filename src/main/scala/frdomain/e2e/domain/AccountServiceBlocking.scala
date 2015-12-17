@@ -20,19 +20,20 @@ class AccountServiceBlocking extends AccountService[ErrorOr] {
       }
     }
 
-  def closeAccount(a: Account, date: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] =
+  def closeAccount(no: String, date: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], Account] =
     kleisliU { repo: AccountRepository[ErrorOr] =>
       for {
-        a <- repo.query(a.no)
-        b <- Account.close(a, date)
-      } yield b
+        a <- repo.query(no)
+        c <- a.map { Account.close(_, date) } getOrElse { s"Account with no $no does not exist".left }
+        s <- repo.store(c)
+      } yield s
     }
 
   def deposit(accountNo: String, amount: Amount, on: DateTime): Kleisli[ErrorOr, AccountRepository[ErrorOr], AccountBalance] =
     kleisliU { repo: AccountRepository[ErrorOr] =>
       for {
         a <- repo.query(accountNo)
-        b <- repo.updateBalance(a, amount, on)
+        b <- a.map { repo.updateBalance(_, amount, on) } getOrElse { s"Account with no $accountNo does not exist".left }
       } yield b
     }
 
@@ -40,9 +41,9 @@ class AccountServiceBlocking extends AccountService[ErrorOr] {
     kleisliU { repo: AccountRepository[ErrorOr] =>
       for {
         a <- repo.query(accountNo)
-        b <- repo.balance(a, on)
-        _ <- AccountBalance.validWithdrawl(b, amount, a.currency)
-        l <- repo.updateBalance(a, -amount, on)
+        b <- a.map { repo.balance(_, on) } getOrElse { s"Account with no $accountNo does not exist".left }
+        _ <- AccountBalance.validWithdrawl(b, amount, b.currency)
+        l <- repo.updateBalance(a.get, -amount, on)
       } yield l
     }
 
@@ -50,7 +51,7 @@ class AccountServiceBlocking extends AccountService[ErrorOr] {
     kleisliU { repo: AccountRepository[ErrorOr] =>
       for {
         a <- repo.query(accountNo)
-        b <- repo.balance(a, asOn)
+        b <- a.map { repo.balance(_, asOn) } getOrElse { s"Account with no $accountNo does not exist".left }
       } yield b
     }
 }

@@ -51,4 +51,17 @@ object App {
   val b3 = setup3.run(InMemoryAccountRepository)
 
   // res0: frdomain.e2e.domain.Common.ErrorOr[frdomain.e2e.domain.AccountBalance] = -\/(Insufficient funds (AccountBalance(c-87654321,Some(Money(Map(USD -> 6000))),2015-12-14)) to withdraw (7500))
+
+  // non existent account number
+  val setup4 =
+  for {
+    _ <- deposit("a-1234", 1000, today) 
+    _ <- deposit("a-1234", 5000, today) 
+    _ <- withdraw("a-1234", 7500, today) 
+    b <- balance("a-1234", today)
+  } yield b
+
+  val b4 = setup4.run(InMemoryAccountRepository)
+
+  // res1: frdomain.e2e.domain.Common.ErrorOr[frdomain.e2e.domain.AccountBalance] = -\/(Account with no a-1234 does not exist)
 }

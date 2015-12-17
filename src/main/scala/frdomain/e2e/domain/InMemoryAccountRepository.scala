@@ -23,8 +23,8 @@ class InMemoryAccountRepository extends AccountRepository[ErrorOr] {
   // balance repo
   private val brepo = TrieMap.empty[(String, LocalDate), Money]
   
-  def query(accountNo: String): ErrorOr[Account] = 
-    arepo.get(accountNo).map(a => a.right).getOrElse(s"Account with no $accountNo does not exist".left)
+  def query(accountNo: String): ErrorOr[Option[Account]] = 
+    arepo.get(accountNo).right
 
   def store(a: Account): ErrorOr[Account] = {
     arepo += ((a.no, a))
