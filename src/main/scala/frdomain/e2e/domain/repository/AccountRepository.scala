@@ -7,8 +7,6 @@ import scalaz._
 import Scalaz._
 import Free._
 
-import Common._
-
 sealed trait AccountRepoF[+A]
   
 case class FindAccount[+A](no: String, onResult: Account => A) extends AccountRepoF[A]

@@ -8,8 +8,6 @@ import Scalaz._
 import scalaz.concurrent.Task
 import Task._
 
-import frdomain.e2e.domain.{AccountRepository => AccountRepositoryZ}
-import Common._
 import repository._
 
 trait AccountService {
@@ -23,7 +21,7 @@ trait AccountService {
 }
 
 object AccountService extends AccountService with AccountRepository {
-  val repository = AccountRepositoryMutableInterpreter()
+  lazy val repository = AccountRepositoryMutableInterpreter()
 
   def openAccount(no: String, name: String, rate: Option[Amount], dateOpened: DateTime = today, ccy: Currency, 
     minBalance: Amount = ZERO): Task[Unit] =

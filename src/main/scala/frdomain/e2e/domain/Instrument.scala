@@ -4,8 +4,6 @@ package domain
 import scalaz._
 import Scalaz._
 
-import Common._
-
 /**
  * Currency and supported currencies
  */

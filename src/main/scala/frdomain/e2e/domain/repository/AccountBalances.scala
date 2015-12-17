@@ -1,6 +1,6 @@
 package frdomain.e2e
 package domain
-package db
+package repository
 
 import slick.driver.H2Driver.api._
 import com.github.tototoshi.slick.PostgresJodaSupport._

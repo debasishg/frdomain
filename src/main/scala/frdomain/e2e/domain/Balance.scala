@@ -5,8 +5,6 @@ import org.joda.time._
 import scalaz._
 import Scalaz._
 
-import Common._
-
 /**
  * Models balance of an account as on a specific date. `balance = None` implies
  * that balance is not available for this date (different from 0 balance).

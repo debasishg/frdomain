@@ -5,8 +5,6 @@ import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
 
-import Common._
-
 /**
  * Make case classes private : we will allow access through smart constructors only
  */

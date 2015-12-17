@@ -11,8 +11,6 @@ import scalaz.concurrent.Task
 import Task._
 import Free._
 
-import Common._
-
 trait AccountRepositoryInterpreter {
   def apply[A](action: AccountRepo[A]): Task[A]
 }
