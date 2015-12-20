@@ -1,5 +1,6 @@
 package frdomain.e2e
 package domain
+package slickdb
 package repository
 
 import slick.driver.H2Driver.api._

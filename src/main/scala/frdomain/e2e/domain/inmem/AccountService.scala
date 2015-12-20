@@ -1,5 +1,6 @@
 package frdomain.e2e
 package domain
+package inmem
 package service
 
 import org.joda.time.DateTime
@@ -8,7 +9,7 @@ import Scalaz._
 import scalaz.concurrent.Task
 import Task._
 
-import repository._
+import inmem.repository._
 
 trait AccountService {
   def openAccount(no: String, name: String, rate: Option[Amount], dateOpened: DateTime = today, ccy: Currency, 

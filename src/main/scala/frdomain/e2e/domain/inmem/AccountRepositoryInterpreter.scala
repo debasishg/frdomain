@@ -1,5 +1,6 @@
 package frdomain.e2e
 package domain
+package inmem
 package repository
 
 import org.joda.time.LocalDate

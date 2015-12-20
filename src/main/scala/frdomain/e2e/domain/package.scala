@@ -6,10 +6,8 @@ import scalaz._
 import Scalaz._
 
 import org.joda.time._
-import domain.repository.AccountRepoF
 
 package object domain {
-  type AccountRepo[A] = Free[AccountRepoF, A]
   type Error = String
   type Amount = BigDecimal
   def today = DateTime.now()
@@ -26,5 +24,6 @@ package object domain {
     implicit def localDateOrdering: scala.math.Ordering[LocalDate] = scala.math.Ordering.fromLessThan(f)
   }
 }
+
 
 

@@ -50,3 +50,11 @@ object Account {
     else if (date isBefore account.dateOpened) s"Account closing date ($date) has to be >= Open date".left
     else account.copy(dateClosed = date.some).right
 }
+
+sealed trait AccountAction {
+  def run(account: Account): ErrorOr[Account]
+}
+
+case class CloseAction(date: DateTime) extends AccountAction {
+  def run(account: Account) = Account.close(account, date)
+}

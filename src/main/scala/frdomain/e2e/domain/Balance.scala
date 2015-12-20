@@ -19,3 +19,18 @@ object AccountBalance {
     else if (current.balance < withdraw) s"Insufficient funds ($current) to withdraw ($withdraw)".left
     else withdraw.right
 }
+
+sealed trait AccountBalanceAction {
+  def run(balance: AccountBalance): ErrorOr[AccountBalance]
+}
+
+case class WithdrawAction(withdraw: Amount) extends AccountBalanceAction {
+  def run(current: AccountBalance) = AccountBalance.validWithdrawl(current, withdraw, current.currency) match {
+    case \/-(amount) => current.copy(balance = current.balance - amount).right
+    case -\/(err) => -\/(err)
+  }
+}
+
+case class DepositAction(amount: Amount) extends AccountBalanceAction {
+  def run(current: AccountBalance) = current.copy(balance = current.balance + amount).right
+}

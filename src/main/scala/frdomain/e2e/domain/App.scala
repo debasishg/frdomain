@@ -5,6 +5,7 @@ import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
 
+import inmem._
 import service._
 
 object App {
