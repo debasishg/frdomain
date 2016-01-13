@@ -15,8 +15,9 @@ case class Account(no: String, name: String, idNo: String, dateOpened: DateTime,
 
 trait AccountService {
   type Error = String
+  type ErrorOr[A] = Error \/ A
 
-  def open(no: String, name: String, idNo: String, dateOpened: DateTime): Error \/ Account = {
+  def open(no: String, name: String, idNo: String, dateOpened: DateTime): ErrorOr[Account] = {
     val isValid: Boolean = verifyId(idNo, name)
     if (isValid) Account(no, name, idNo, dateOpened, None).right
     else s"Id ($idNo) validation failed".left
@@ -40,8 +41,12 @@ trait AccountService {
     }
   }
 
-  type ErrorOr[A] = Error \/ A
-  def open1(no: String, name: String, idNo: String, dateOpened: DateTime) = kleisli[ErrorOr, IdVerifier, Account] { (v: IdVerifier) =>
+  def open1(no: String, name: String, idNo: String, dateOpened: DateTime): IdVerifier => ErrorOr[Account] = { (v: IdVerifier) =>
+    if (v.verifyId(idNo, name)) Account(no, name, idNo, dateOpened, None).right
+    else s"Id ($idNo) validation failed".left
+  }
+
+  def open2(no: String, name: String, idNo: String, dateOpened: DateTime) = kleisli[ErrorOr, IdVerifier, Account] { (v: IdVerifier) =>
     if (v.verifyId(idNo, name)) Account(no, name, idNo, dateOpened, None).right
     else s"Id ($idNo) validation failed".left
   }
