@@ -1,6 +1,5 @@
 package frdomain.ch9
 package domain
-package model
 
 import org.joda.time.DateTime
 import scala.concurrent.Future
