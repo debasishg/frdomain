@@ -28,7 +28,7 @@ object AllGen {
 
   val genName = Gen.oneOf("john", "david", "mary")
 
-  def genOptionalCloseDate(seed: Date) = 
+  def genOptionalValidCloseDate(seed: Date) = 
     Gen.frequency(
       (8, Some(aDateAfter(seed))), 
       (1, None)
@@ -43,24 +43,24 @@ object CheckingAccountSpecification extends Properties("Account") {
   import Account._
   import AllGen._
 
-  val genCheckingAccountCreation = for {
+  val validCheckingAccountGen = for {
     no <- genValidAccountNo
     nm <- genName
     od <- arbitrary[Date]
-    cd <- genOptionalCloseDate(od)
+    cd <- genOptionalValidCloseDate(od)
     bl <- arbitrary[Balance]
   } yield checkingAccount(no, nm, Some(od), cd, bl)
 
-  val genSavingsAccountCreation = for {
+  val validSavingsAccountGen = for {
     no <- genValidAccountNo
     nm <- genName
     rt <- Gen.choose(5, 10)
     od <- arbitrary[Date]
-    cd <- genOptionalCloseDate(od)
+    cd <- genOptionalValidCloseDate(od)
     bl <- arbitrary[Balance]
   } yield savingsAccount(no, nm, rt, Some(od), cd, bl)
 
-  val genFailedCheckingAccountCreation = for {
+  val invalidCheckingAccountGen = for {
     no <- genInvalidAccountNo
     nm <- genName
     od <- arbitrary[Date]
@@ -68,29 +68,35 @@ object CheckingAccountSpecification extends Properties("Account") {
     bl <- arbitrary[Balance]
   } yield checkingAccount(no, nm, Some(od), cd, bl)
 
-  val genClosedCheckingAccountCreation = for {
+  val validClosedCheckingAccountGen = for {
     no <- genValidAccountNo
     nm <- genName
     od <- arbitrary[Date]
-    cd <- genOptionalCloseDate(od) suchThat (_ isDefined)
+    cd <- genOptionalValidCloseDate(od) suchThat (_ isDefined)
     bl <- arbitrary[Balance]
   } yield checkingAccount(no, nm, Some(od), cd, bl)
 
-  val genZeroBalanceCheckingAccountCreation = for {
+  val validZeroBalanceCheckingAccountGen = for {
     no <- genValidAccountNo
     nm <- genName
     od <- arbitrary[Date]
   } yield checkingAccount(no, nm, Some(od), None, Balance(0))
 
-  property("Checking Account creation successful") = forAll(genCheckingAccountCreation)(_.isRight) 
+  property("Checking Account creation successful") = forAll(validCheckingAccountGen)(_.isRight) 
 
-  property("Checking Account creation failure") = forAll(genFailedCheckingAccountCreation)(_.isLeft)
+  property("Checking Account creation failure") = 
+    forAll(invalidCheckingAccountGen) { 
+      _ match {
+        case -\/(NonEmptyList(InvalidAccountNo(_))) => true
+        case -\/(NonEmptyList(InvalidAccountNo(_), InvalidOpenCloseDate(_))) => true
+        case _ => false
+      }
+    }
+    
+  property("Savings Account creation successful") = forAll(validSavingsAccountGen)(_.isRight)
 
-  property("Savings Account creation successful") = forAll(genSavingsAccountCreation)(_.isRight)
-
-  property("Close Account if not already closed") = forAll(genCheckingAccountCreation) { creation =>
-    creation.isRight == true
-    creation.map { account =>
+  property("Close Account if not already closed") = forAll(validCheckingAccountGen) { 
+    _.map { account =>
       account.dateOfClose.map(_ => true).getOrElse(
         close(account, 
               account.dateOfOpen.map(aDateAfter(_)).getOrElse(common.today)
@@ -99,17 +105,21 @@ object CheckingAccountSpecification extends Properties("Account") {
     }.getOrElse(false)
   }
 
-  property("Update balance on closed account fails") = forAll(genClosedCheckingAccountCreation, genAmount) { (creation, amount) =>
-    creation.isRight == true
+  property("Update balance on closed account fails") = forAll(validClosedCheckingAccountGen, genAmount) { (creation, amount) =>
     creation.map { account =>
-      updateBalance(account, amount).isLeft == true
+      updateBalance(account, amount) match {
+        case -\/(NonEmptyList(AlreadyClosed(_))) => true
+        case _ => false
+      }
     }.getOrElse(false)
   }
 
-  property("Update balance on account with insufficient funds fails") = forAll(genZeroBalanceCheckingAccountCreation, genAmount) { (creation, amount) =>
-    creation.isRight == true
+  property("Update balance on account with insufficient funds fails") = forAll(validZeroBalanceCheckingAccountGen, genAmount) { (creation, amount) =>
     creation.map { account =>
-      updateBalance(account, -amount).isLeft == true
+      updateBalance(account, -amount) match {
+        case -\/(NonEmptyList(InsufficientBalance(_))) => true
+        case _ => false
+      }
     }.getOrElse(false)
   }
 }
