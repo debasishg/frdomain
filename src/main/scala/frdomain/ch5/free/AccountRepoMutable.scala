@@ -5,8 +5,8 @@ import scala.collection.mutable.{ Map => MMap }
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
-import Task._
-import Free._
+import Task.{now, fail}
+import Free.runFC
 
 trait AccountRepoInterpreter {
   def apply[A](action: AccountRepo[A]): Task[A]
@@ -19,35 +19,36 @@ trait AccountRepoInterpreter {
 case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter {
   val table: MMap[String, Account] = MMap.empty[String, Account]
 
-  def step[A](action: AccountRepoF[AccountRepo[A]]): Task[AccountRepo[A]] = action match {
+  val step: AccountRepoF ~> Task = new (AccountRepoF ~> Task) {
+    override def apply[A](fa: AccountRepoF[A]): Task[A] = fa match {
+      case Query(no) =>
+        table.get(no).map { a => now(a) }
+                     .getOrElse { fail(new RuntimeException(s"Account no $no not found")) }
 
-    case Query(no, onResult) => 
-      table.get(no).map { a => now(onResult(a)) }
-                   .getOrElse { fail(new RuntimeException(s"Account no $no not found")) }
-
-    case Store(account, next) => now(table += ((account.no, account))).map { _ => next }
-    case Delete(no, next) => now(table -= no).map { _ => next }
+      case Store(account) => now(table += ((account.no, account))).void
+      case Delete(no) => now(table -= no).void
+    }
   }
 
   /**
    * Turns the AccountRepo script into a `Task` that executes it in a mutable setting
    */
-  def apply[A](action: AccountRepo[A]): Task[A] = action.runM(step)
+  def apply[A](action: AccountRepo[A]): Task[A] = runFC(action)(step)
 }
 
 case class AccountRepoShowInterpreter() {
 
-  def interpret[A](script: AccountRepo[A], ls: List[String]): List[String] = script.fold(_ => ls, {
+  type ListState[A] = State[List[String], A]
+  val step: AccountRepoF ~> ListState = new (AccountRepoF ~> ListState) {
+    private def show(s: String): ListState[Unit] = State(l => (l ++ List(s), ()))
+    override def apply[A](fa: AccountRepoF[A]): ListState[A] = fa match {
+      case Query(no) => show(s"Query for $no").map(_ => Account(no, ""))
+      case Store(account) => show(s"Storing $account")
+      case Delete(no) => show(s"Deleting $no")
+    }
+  }
 
-    case Query(no, onResult) =>
-      interpret(onResult(Account(no, "")), ls ++ List(s"Query for $no"))
-
-    case Store(account, next) =>
-      interpret(next, ls ++ List(s"Storing $account"))
-
-    case Delete(no, next) =>
-      interpret(next, ls ++ List(s"Deleting $no"))
-
-  })
+  def interpret[A](script: AccountRepo[A], ls: List[String]): List[String] =
+    runFC[AccountRepoF, ListState, A](script)(step).exec(ls)
 
 }

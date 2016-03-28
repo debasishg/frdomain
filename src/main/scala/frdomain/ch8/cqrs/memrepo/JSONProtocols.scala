@@ -39,8 +39,8 @@ object JSONProtocols {
 
   implicit val accountFormat = jsonFormat5(Account.apply)
 
-  implicit object OpenedFormat extends RootJsonFormat[Opened[_]] {
-    def write(o: Opened[_]) = JsObject(
+  implicit object OpenedFormat extends RootJsonFormat[Opened] {
+    def write(o: Opened) = JsObject(
       "no" -> JsString(o.no),
       "name" -> JsString(o.name),
       "openingDate" -> o.openingDate.map(d => d.toJson).getOrElse(JsNull),
@@ -50,13 +50,13 @@ object JSONProtocols {
 
     def read(j: JsValue) = j.asJsObject.getFields("no", "name", "openingDate", "at") match {
       case Seq(JsString(n), JsString(m), od, a) => 
-        Opened(n, m, if (od == JsNull) None else Some(od.convertTo[DateTime]), a.convertTo[DateTime], identity)
+        Opened(n, m, if (od == JsNull) None else Some(od.convertTo[DateTime]), a.convertTo[DateTime])
       case _ => deserializationError(f"'$j' is not a valid Opened value")
     }
   }
 
-  implicit object ClosedFormat extends RootJsonFormat[Closed[_]] {
-    def write(o: Closed[_]) = JsObject(
+  implicit object ClosedFormat extends RootJsonFormat[Closed] {
+    def write(o: Closed) = JsObject(
       "no" -> JsString(o.no),
       "closeDate" -> o.closeDate.map(d => d.toJson).getOrElse(JsNull),
       "at" -> o.at.toJson,
@@ -65,13 +65,13 @@ object JSONProtocols {
 
     def read(j: JsValue) = j.asJsObject.getFields("no", "closeDate", "at") match {
       case Seq(JsString(n), od, a) => 
-        Closed(n, if (od == JsNull) None else Some(od.convertTo[DateTime]), a.convertTo[DateTime], identity)
+        Closed(n, if (od == JsNull) None else Some(od.convertTo[DateTime]), a.convertTo[DateTime])
       case _ => deserializationError(f"'$j' is not a valid Closed value")
     }
   }
 
-  implicit object DebitedFormat extends RootJsonFormat[Debited[_]] {
-    def write(o: Debited[_]) = JsObject(
+  implicit object DebitedFormat extends RootJsonFormat[Debited] {
+    def write(o: Debited) = JsObject(
       "no" -> JsString(o.no),
       "amount" -> JsNumber(o.amount),
       "at" -> o.at.toJson,
@@ -80,13 +80,13 @@ object JSONProtocols {
 
     def read(j: JsValue) = j.asJsObject.getFields("no", "amount", "at") match {
       case Seq(JsString(n), JsNumber(m), a) => 
-        Debited(n, m, a.convertTo[DateTime], identity)
+        Debited(n, m, a.convertTo[DateTime])
       case _ => deserializationError(f"'$j' is not a valid Debited value")
     }
   }
 
-  implicit object CreditedFormat extends RootJsonFormat[Credited[_]] {
-    def write(o: Credited[_]) = JsObject(
+  implicit object CreditedFormat extends RootJsonFormat[Credited] {
+    def write(o: Credited) = JsObject(
       "no" -> JsString(o.no),
       "amount" -> JsNumber(o.amount),
       "at" -> o.at.toJson,
@@ -95,17 +95,17 @@ object JSONProtocols {
 
     def read(j: JsValue) = j.asJsObject.getFields("no", "amount", "at") match {
       case Seq(JsString(n), JsNumber(m), a) => 
-        Credited(n, m, a.convertTo[DateTime], identity)
+        Credited(n, m, a.convertTo[DateTime])
       case _ => deserializationError(f"'$j' is not a valid Credited value")
     }
   }
 
   implicit object EventFormat extends RootJsonFormat[Event[_]] {
     def write(e: Event[_]) = e match {
-      case o @ Opened(_, _, _, _, _)   => OpenedFormat.write(o)
-      case c @ Closed(n, d, _, _)      => ClosedFormat.write(c)
-      case d @ Debited(_, _, _, _)     => DebitedFormat.write(d)
-      case c @ Credited(_, _, _, _)    => CreditedFormat.write(c)
+      case o @ Opened(_, _, _, _)   => OpenedFormat.write(o)
+      case c @ Closed(n, d, _)      => ClosedFormat.write(c)
+      case d @ Debited(_, _, _)     => DebitedFormat.write(d)
+      case c @ Credited(_, _, _)    => CreditedFormat.write(c)
     }
 
     def read(j: JsValue) = j.asJsObject.getFields("type") match {

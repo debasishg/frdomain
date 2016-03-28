@@ -7,8 +7,7 @@ import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task._
-import Free._
-import \/._
+import Free.{FreeC, liftFC, runFC}
 
 import collection.concurrent.TrieMap
 
@@ -16,43 +15,32 @@ import common._
 import spray.json._
 import JSONProtocols._
 
-trait Event[+Next] {
+trait Event[A] {
   def at: DateTime
 }
 
-case class Opened[Next](no: String, name: String, openingDate: Option[DateTime], at: DateTime = today, 
-  onInit: Account => Next) extends Event[Next]
-case class Closed[Next](no: String, closeDate: Option[DateTime], at: DateTime = today, 
-  onClose: Account => Next) extends Event[Next]
-case class Debited[Next](no: String, amount: Amount, at: DateTime = today, onDebit: Account => Next) extends Event[Next]
-case class Credited[Next](no: String, amount: Amount, at: DateTime = today, onCredit: Account => Next) extends Event[Next]
+case class Opened(no: String, name: String, openingDate: Option[DateTime], at: DateTime = today) extends Event[Account]
+case class Closed(no: String, closeDate: Option[DateTime], at: DateTime = today) extends Event[Account]
+case class Debited(no: String, amount: Amount, at: DateTime = today) extends Event[Account]
+case class Credited(no: String, amount: Amount, at: DateTime = today) extends Event[Account]
 
 object Event {
 
   val eventLog = TrieMap[String, List[Event[_]]]() 
   val eventLogJson = TrieMap[String, List[String]]()
 
-  implicit def functor: Functor[Event] = new Functor[Event] {
-    override def map[A, B](fa: Event[A])(f: (A) => B): Event[B] = fa match {
-      case o @ Opened(no, nm, odt, _, onInit) => o.copy(onInit = onInit andThen f)
-      case c @ Closed(no, cdt, _, onClose) => c.copy(onClose = onClose andThen f)
-      case d @ Debited(no, amt, _, onDebit) => d.copy(onDebit = onDebit andThen f)
-      case r @ Credited(no, amt, _, onCredit) => r.copy(onCredit = onCredit andThen f)
-    }
-  }
-
   def updateState(e: Event[_], initial: Map[String, Account]) = e match {
-    case o @ Opened(no, name, odate, _, _) =>
+    case o @ Opened(no, name, odate, _) =>
       initial + (no -> Account(no, name, odate.get))
 
-    case c @ Closed(no, cdate, _, next) => 
+    case c @ Closed(no, cdate, _) =>
       initial + (no -> initial(no).copy(dateOfClosing = Some(cdate.getOrElse(today))))
 
-    case d @ Debited(no, amount, _, next) => 
+    case d @ Debited(no, amount, _) =>
       val a = initial(no)
       initial + (no -> a.copy(balance = Balance(a.balance.amount - amount)))
 
-    case r @ Credited(no, amount, _, next) => 
+    case r @ Credited(no, amount, _) =>
       val a = initial(no)
       initial + (no -> a.copy(balance = Balance(a.balance.amount + amount)))
   }
@@ -112,42 +100,42 @@ object Commands extends Commands {
             .getOrElse(no.right)
     
     
-  def handleCommand[A](e: Event[A]) = e match {
+  def handleCommand[A](e: Event[A]): Task[A] = e match {
 
-    case o @ Opened(no, name, odate, _, onInit) => validateOpen(no).fold(
+    case o @ Opened(no, name, odate, _) => validateOpen(no).fold(
       err => fail(new RuntimeException(err)),
       _   => now {
         val a = Account(no, name, odate.get)
         eventLog += (no -> List(o))
         eventLogJson += (no -> List(OpenedFormat.write(o).toString))
-        onInit(a)
+        a
       }
     )
 
-    case c @ Closed(no, cdate, _, onClose) => validateClose(no, cdate).fold(
+    case c @ Closed(no, cdate, _) => validateClose(no, cdate).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (c :: eventLog.getOrElse(no, Nil)))
         eventLogJson += (no -> (ClosedFormat.write(c).toString :: eventLogJson.getOrElse(no, Nil)))
-        onClose(updateState(c, currentState)(no))
+        updateState(c, currentState)(no)
       }
     )
 
-    case d @ Debited(no, amount, _, onDebit) => validateDebit(no, amount).fold(
+    case d @ Debited(no, amount, _) => validateDebit(no, amount).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (d :: eventLog.getOrElse(no, Nil)))
         eventLogJson += (no -> (DebitedFormat.write(d).toString :: eventLogJson.getOrElse(no, Nil)))
-        onDebit(updateState(d, currentState)(no))
+        updateState(d, currentState)(no)
       }
     )
 
-    case r @ Credited(no, amount, _, onCredit) => validateCredit(no).fold(
+    case r @ Credited(no, amount, _) => validateCredit(no).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog += (no -> (r :: eventLog.getOrElse(no, Nil)))
         eventLogJson += (no -> (CreditedFormat.write(r).toString :: eventLogJson.getOrElse(no, Nil)))
-        onCredit(updateState(r, currentState)(no))
+        updateState(r, currentState)(no)
       }
     )
   }
@@ -157,22 +145,24 @@ trait Commands {
   import Event._
   import scala.language.implicitConversions
 
-  type Command[A] = Free[Event, A]
+  type Command[A] = FreeC[Event, A]
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftF(event)
+  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftFC(event)
 
-  def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = Opened(no, name, openingDate, today, identity)
-  def close(no: String, closeDate: Option[DateTime]): Command[Account] = Closed(no, closeDate, today, identity)
-  def debit(no: String, amount: Amount): Command[Account] = Debited(no, amount, today, identity)
-  def credit(no: String, amount: Amount): Command[Account] = Credited(no, amount, today, identity)
+  def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = Opened(no, name, openingDate, today)
+  def close(no: String, closeDate: Option[DateTime]): Command[Account] = Closed(no, closeDate, today)
+  def debit(no: String, amount: Amount): Command[Account] = Debited(no, amount, today)
+  def credit(no: String, amount: Amount): Command[Account] = Credited(no, amount, today)
 }
 
 object RepositoryBackedInterpreter {
   import Commands._
 
-  def step[A](action: Event[Free[Event, A]]): Task[Free[Event, A]] = handleCommand(action)
- 
-  def apply[A](action: Free[Event, A]): Task[A] = action.runM(step)
+  val step: Event ~> Task = new (Event ~> Task) {
+    override def apply[A](action: Event[A]): Task[A] = handleCommand(action)
+  }
+
+  def apply[A](action: Command[A]): Task[A] = runFC(action)(step)
 }
 
 object Scripts extends Commands {

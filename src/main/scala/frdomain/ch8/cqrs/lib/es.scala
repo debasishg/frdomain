@@ -4,6 +4,7 @@ package cqrs.lib
 import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
+import scalaz.Free.{FreeC, runFC}
 import scalaz.concurrent.Task
 import \/._
 
@@ -17,7 +18,7 @@ import Common._
 /**
  * The `Event` abstraction. `Next` points to the next event in chain
  */
-trait Event[+Next] {
+trait Event[A] {
   def at: DateTime
 }
 
@@ -36,11 +37,11 @@ trait Snapshot[A <: Aggregate] {
 }
 
 trait Commands[A] {
-  type Command[A] = Free[Event, A]
+  type Command[A] = FreeC[Event, A]
 }
 
 trait RepositoryBackedInterpreter {
-  def step[A](action: Event[Free[Event, A]]): Task[Free[Event, A]]
- 
-  def apply[A](action: Free[Event, A])(implicit f: Functor[Event]): Task[A] = action.runM(step)
+  def step: Event ~> Task
+
+  def apply[A](action: FreeC[Event, A]): Task[A] = runFC(action)(step)
 }

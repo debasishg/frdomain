@@ -1,10 +1,6 @@
 package frdomain.ch5
 package free
 
-import scalaz._
-import Scalaz._
-import Free._
-
 object Main {
 
   import common._

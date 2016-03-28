@@ -14,62 +14,46 @@ import cqrs.lib._
 
 import common._
 
-case class Opened[Next](no: String, name: String, openingDate: Option[DateTime], at: DateTime = today, 
-  onInit: Account => Next) extends Event[Next]
-case class Closed[Next](no: String, closeDate: Option[DateTime], at: DateTime = today, 
-  onClose: Account => Next) extends Event[Next]
-case class Debited[Next](no: String, amount: Amount, at: DateTime = today, onDebit: Account => Next) extends Event[Next]
-case class Credited[Next](no: String, amount: Amount, at: DateTime = today, onCredit: Account => Next) extends Event[Next]
-
-object Event {
-
-  implicit def functor: Functor[Event] = new Functor[Event] {
-    override def map[A, B](fa: Event[A])(f: (A) => B): Event[B] = fa match {
-      case o @ Opened(no, nm, odt, _, onInit) => o.copy(onInit = onInit andThen f)
-      case c @ Closed(no, cdt, _, onClose) => c.copy(onClose = onClose andThen f)
-      case d @ Debited(no, amt, _, onDebit) => d.copy(onDebit = onDebit andThen f)
-      case r @ Credited(no, amt, _, onCredit) => r.copy(onCredit = onCredit andThen f)
-    }
-  }
-}
+case class Opened(no: String, name: String, openingDate: Option[DateTime], at: DateTime = today) extends Event[Account]
+case class Closed(no: String, closeDate: Option[DateTime], at: DateTime = today) extends Event[Account]
+case class Debited(no: String, amount: Amount, at: DateTime = today) extends Event[Account]
+case class Credited(no: String, amount: Amount, at: DateTime = today) extends Event[Account]
 
 object AccountSnapshot extends Snapshot[Account] {
 
   def updateState(e: Event[_], initial: Map[String, Account]) = e match {
-    case o @ Opened(no, name, odate, _, _) =>
+    case o @ Opened(no, name, odate, _) =>
       initial + (no -> Account(no, name, odate.get))
 
-    case c @ Closed(no, cdate, _, next) => 
+    case c @ Closed(no, cdate, _) =>
       initial + (no -> initial(no).copy(dateOfClosing = Some(cdate.getOrElse(today))))
 
-    case d @ Debited(no, amount, _, next) => 
+    case d @ Debited(no, amount, _) =>
       val a = initial(no)
       initial + (no -> a.copy(balance = Balance(a.balance.amount - amount)))
 
-    case r @ Credited(no, amount, _, next) => 
+    case r @ Credited(no, amount, _) =>
       val a = initial(no)
       initial + (no -> a.copy(balance = Balance(a.balance.amount + amount)))
   }
 }
 
 trait AccountCommands extends Commands[Account] {
-  import Event._
   import scala.language.implicitConversions
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftF(event)
+  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftFC(event)
 
   def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = 
-    Opened(no, name, openingDate, today, identity)
+    Opened(no, name, openingDate, today)
   def close(no: String, closeDate: Option[DateTime]): Command[Account] = 
-    Closed(no, closeDate, today, identity)
+    Closed(no, closeDate, today)
   def debit(no: String, amount: Amount): Command[Account] = 
-    Debited(no, amount, today, identity)
+    Debited(no, amount, today)
   def credit(no: String, amount: Amount): Command[Account] = 
-    Credited(no, amount, today, identity)
+    Credited(no, amount, today)
 }
 
 object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
-  import Event._
   import AccountSnapshot._
   import spray.json._
   import JSONProtocols._
@@ -81,7 +65,9 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
 
   import eventLog._
 
-  def step[A](action: Event[Free[Event, A]]): Task[Free[Event, A]] = handleCommand(action)
+  val step: Event ~> Task = new (Event ~> Task) {
+    override def apply[A](action: Event[A]): Task[A] = handleCommand(action)
+  }
 
   private def closed(a: Account): Error \/ Account =
     if (a.dateOfClosing isDefined) s"Account ${a.no} is closed".left
@@ -122,38 +108,38 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
     else no.right
   }
 
-  private def handleCommand[A](e: Event[A]) = e match {
+  private def handleCommand[A](e: Event[A]): Task[A] = e match {
 
-    case o @ Opened(no, name, odate, _, onInit) => validateOpen(no).fold(
+    case o @ Opened(no, name, odate, _) => validateOpen(no).fold(
       err => fail(new RuntimeException(err)),
       _   => now {
         val a = Account(no, name, odate.get)
         eventLog.put(no, o)
-        onInit(a)
+        a
       }
     )
 
-    case c @ Closed(no, cdate, _, onClose) => validateClose(no, cdate).fold(
+    case c @ Closed(no, cdate, _) => validateClose(no, cdate).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog.put(no, c)
-        onClose(updateState(c, currentState)(no))
+        updateState(c, currentState)(no)
       }
     )
 
-    case d @ Debited(no, amount, _, onDebit) => validateDebit(no, amount).fold(
+    case d @ Debited(no, amount, _) => validateDebit(no, amount).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog.put(no, d)
-        onDebit(updateState(d, currentState)(no))
+        updateState(d, currentState)(no)
       }
     )
 
-    case r @ Credited(no, amount, _, onCredit) => validateCredit(no).fold(
+    case r @ Credited(no, amount, _) => validateCredit(no).fold(
       err => fail(new RuntimeException(err)),
       currentState => now {
         eventLog.put(no, r)
-        onCredit(updateState(r, currentState)(no))
+        updateState(r, currentState)(no)
       }
     )
   }

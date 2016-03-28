@@ -3,29 +3,18 @@ package cqrs
 package pure
 
 import java.util.Date
-import scalaz.{State, Free, Functor}
-import scalaz.Free.liftF
 
-import collection.concurrent.TrieMap
-
+import scalaz.{~>, State}
+import scalaz.Free.{FreeC, liftFC, runFC}
 import common._
 
-trait Event[+Next]
-case class Opened[Next](no: String, name: String, openingDate: Option[Date], onInit: String => Next) extends Event[Next]
-case class Closed[Next](no: String, closeDate: Option[Date], next: Next) extends Event[Next]
-case class Debited[Next](no: String, amount: Amount, next: Next) extends Event[Next]
-case class Credited[Next](no: String, amount: Amount, next: Next) extends Event[Next]
+sealed trait Event[A]
+case class Opened(no: String, name: String, openingDate: Option[Date]) extends Event[String]
+case class Closed(no: String, closeDate: Option[Date]) extends Event[Unit]
+case class Debited(no: String, amount: Amount) extends Event[Unit]
+case class Credited(no: String, amount: Amount) extends Event[Unit]
 
 object Event {
-
-  implicit def functor: Functor[Event] = new Functor[Event] {
-    override def map[A, B](fa: Event[A])(f: (A) => B): Event[B] = fa match {
-      case o @ Opened(no, nm, odt, onInit) => o.copy(onInit = onInit andThen f)
-      case c @ Closed(no, cdt, next) => c.copy(next = f(next))
-      case d @ Debited(no, amt, next) => d.copy(next = f(next))
-      case r @ Credited(no, amt, next) => r.copy(next = f(next))
-    }
-  }
 
   private def debitImpl(a: Account, amount: Amount) = {
     if (a.balance.amount < amount) throw new RuntimeException("insufficient fund to debit")
@@ -37,16 +26,16 @@ object Event {
   }
 
   def updateState(e: Event[_], initial: Map[String, Account]) = e match {
-    case o @ Opened(no, name, odate, _) =>
+    case Opened(no, name, odate) =>
       initial + (no -> Account(no, name, odate.get))
 
-    case c @ Closed(no, cdate, next) => 
+    case Closed(no, cdate) =>
       initial + (no -> initial(no).copy(dateOfClosing = cdate))
 
-    case d @ Debited(no, amount, next) => 
+    case Debited(no, amount) =>
       initial + (no -> debitImpl(initial(no), amount))
 
-    case r @ Credited(no, amount, next) => 
+    case Credited(no, amount) =>
       initial + (no -> creditImpl(initial(no), amount))
   }
 }
@@ -57,14 +46,14 @@ trait Commands {
   import Event._
   import scala.language.implicitConversions
 
-  type Command[A] = Free[Event, A]
+  type Command[A] = FreeC[Event, A]
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftF(event)
+  private implicit def liftEvent[A](event: Event[A]): Command[A] = liftFC(event)
 
-  def open(no: String, name: String, openingDate: Option[Date]): Command[String] = Opened(no, name, openingDate, identity)
-  def close(no: String, closeDate: Option[Date]): Command[Unit] = Closed(no, closeDate, ())
-  def debit(no: String, amount: Amount): Command[Unit] = Debited(no, amount, ())
-  def credit(no: String, amount: Amount): Command[Unit] = Credited(no, amount, ())
+  def open(no: String, name: String, openingDate: Option[Date]): Command[String] = Opened(no, name, openingDate)
+  def close(no: String, closeDate: Option[Date]): Command[Unit] = Closed(no, closeDate)
+  def debit(no: String, amount: Amount): Command[Unit] = Debited(no, amount)
+  def credit(no: String, amount: Amount): Command[Unit] = Credited(no, amount)
 }
 
 object Scripts extends Commands {
@@ -93,20 +82,27 @@ object Scripts extends Commands {
 
 object PureInterpreter {
   import Event._
+  import Commands.Command
+  type MapState[A] = State[Map[String, Account], A]
 
-  def interpret[A](c: Free[Event, A], state: Map[String, Account] = Map.empty): Map[String, Account] = c.resume.fold({
-    case o @ Opened(no, name, odate, onInit) =>
-      interpret(onInit(no), updateState(o, state)) 
+  val step = new (Event ~> MapState) {
+    override def apply[A](fa: Event[A]): MapState[A] = fa match {
+      case o @ Opened(no, _, _) =>
+        State { s => (updateState(o, s), no) }
 
-    case c @ Closed(no, cdate, next) => 
-      interpret(next, updateState(c, state))
+      case c @ Closed(_, _) =>
+        State { s => (updateState(c, s), ()) }
 
-    case d @ Debited(no, amount, next) => 
-      interpret(next, updateState(d, state))
+      case d @ Debited(_, _) =>
+        State { s => (updateState(d, s), ()) }
 
-    case r @ Credited(no, amount, next) => 
-      interpret(next, updateState(r, state))
-  }, _ => state)
+      case r @ Credited(_, _) =>
+        State { s => (updateState(r, s), ()) }
+    }
+  }
+
+  def interpret[A](c: Command[A], state: Map[String, Account] = Map.empty): Map[String, Account] =
+    runFC(c)(step).exec(state)
 
 }
 
