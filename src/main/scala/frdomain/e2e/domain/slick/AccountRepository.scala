@@ -13,7 +13,10 @@ sealed trait AccountRepoF[+A]
   
 case class FindAccount[+A](no: String, onResult: Option[Account] => A) extends AccountRepoF[A]
 case class StoreAccount[+A](account: Account, prehook: Option[AccountAction], next: Option[Account] => A) extends AccountRepoF[A]
-case class StoreBalance[+A](balance: AccountBalance, prehook: Option[AccountBalanceAction], next: Option[AccountBalance] => A) extends AccountRepoF[A]
+
+case class StoreBalance[+A](balance: AccountBalance, prehook: Option[AccountBalanceAction], 
+  next: Option[AccountBalance] => A) extends AccountRepoF[A]
+
 case class FindBalance[+A](no: String, asOn: LocalDate, onResult: Option[AccountBalance] => A) extends AccountRepoF[A]
 
 object AccountRepoF {

@@ -20,6 +20,7 @@ trait AccountService {
   def deposit(accountNo: String, amount: Amount, on: DateTime): Future[Option[AccountBalance]]
   def withdraw(accountNo: String, amount: Amount, on: DateTime): Future[Option[AccountBalance]]
   def balance(accountNo: String, asOn: DateTime): Future[Option[AccountBalance]]
+  def transfer(from: String, to: String, amount: Amount, on: DateTime): Future[Option[AccountBalance]]
 }
 
 class AccountServiceImpl(db: Database) extends AccountService with AccountRepository {
@@ -43,5 +44,10 @@ class AccountServiceImpl(db: Database) extends AccountService with AccountReposi
 
   def balance(accountNo: String, asOn: DateTime): Future[Option[AccountBalance]] = 
     repository(findBalance(accountNo, asOn.toLocalDate))
+
+  def transfer(from: String, to: String, amount: Amount, on: DateTime): Future[Option[AccountBalance]] = for {
+    w <- withdraw(from, amount, on)
+    d <- deposit(to, amount, on)
+  } yield d
 }
 

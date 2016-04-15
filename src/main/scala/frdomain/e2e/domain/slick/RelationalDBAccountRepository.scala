@@ -36,7 +36,7 @@ case class AccountRepositoryRelationalDBInterpreter(db: Database) {
     case StoreAccount(account, pre, onResult) => pre match {
       case Some(p) => 
         p.run(account) match {
-          case \/-(a) => db.run(DBIO.seq(accounts += a)).map { _ => onResult(a.some) }
+          case \/-(a) => db.run(DBIO.seq(accounts += a)).map { _ => onResult(a.some) }  // todo : handle updates
           case -\/(err) => Future.failed(new RuntimeException(err)).map { onResult }
         }
       case None =>
@@ -54,7 +54,7 @@ case class AccountRepositoryRelationalDBInterpreter(db: Database) {
     case StoreBalance(curr, pre, onResult) => pre match {
       case Some(p) => 
         p.run(curr) match {
-          case \/-(b) => db.run(DBIO.seq(balances += b)).map { _ => onResult(b.some) }
+          case \/-(b) => db.run(DBIO.seq(balances += b)).map { _ => onResult(b.some) }  // todo : handle updates
           case -\/(err) => Future.failed(new RuntimeException(err)).map { onResult }
         }
       case None =>

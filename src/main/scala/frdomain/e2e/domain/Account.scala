@@ -41,7 +41,12 @@ object Account {
    */
   def account(no: String, name: String, rate: Option[Amount], openDate: DateTime, ccy: Currency, 
     minBalanceRequired: Amount = ZERO): ValidationNel[Error, Account] = 
-    (validNo(no) |@| validOpenDate(openDate) |@| validMinBalance(minBalanceRequired) |@| validRateOfInterest(rate)) { (n, o, m, r) =>
+    (
+      validNo(no) |@| 
+      validOpenDate(openDate) |@| 
+      validMinBalance(minBalanceRequired) |@| 
+      validRateOfInterest(rate)
+    ) { (n, o, m, r) =>
       Account(n, name, r, o, None, ccy, m)
     }
 

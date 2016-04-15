@@ -25,9 +25,8 @@ sealed trait AccountBalanceAction {
 }
 
 case class WithdrawAction(withdraw: Amount) extends AccountBalanceAction {
-  def run(current: AccountBalance) = AccountBalance.validWithdrawl(current, withdraw, current.currency) match {
-    case \/-(amount) => current.copy(balance = current.balance - amount).right
-    case -\/(err) => -\/(err)
+  def run(current: AccountBalance) = AccountBalance.validWithdrawl(current, withdraw, current.currency).map { amount => 
+    current.copy(balance = current.balance - amount)
   }
 }
 
