@@ -7,7 +7,6 @@ import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task._
-import Free._
 import \/._
 
 import cqrs.lib._
@@ -41,7 +40,7 @@ object AccountSnapshot extends Snapshot[Account] {
 trait AccountCommands extends Commands[Account] {
   import scala.language.implicitConversions
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftFC(event)
+  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = Free.liftF(event)
 
   def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = 
     Opened(no, name, openingDate, today)

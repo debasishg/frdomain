@@ -22,8 +22,8 @@ object FRDomainProject extends Build
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
     libraryDependencies := Seq(
-      "org.scalaz"                   %% "scalaz-core"                   % "7.1.0",
-      "org.scalaz"                   %% "scalaz-concurrent"             % "7.1.0",
+      "org.scalaz"                   %% "scalaz-core"                   % "7.2.2",
+      "org.scalaz"                   %% "scalaz-concurrent"             % "7.2.2",
       "joda-time"                    %  "joda-time"                     % "2.9.1",
       "org.joda"                     %  "joda-convert"                  % "1.8.1",
       "io.spray"                     %% "spray-json"                    % "1.3.2",

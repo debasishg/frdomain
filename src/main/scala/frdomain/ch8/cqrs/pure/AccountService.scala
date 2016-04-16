@@ -4,8 +4,7 @@ package pure
 
 import java.util.Date
 
-import scalaz.{~>, State}
-import scalaz.Free.{FreeC, liftFC, runFC}
+import scalaz.{~>, State, Free}
 import common._
 
 sealed trait Event[A]
@@ -46,9 +45,9 @@ trait Commands {
   import Event._
   import scala.language.implicitConversions
 
-  type Command[A] = FreeC[Event, A]
+  type Command[A] = Free[Event, A]
 
-  private implicit def liftEvent[A](event: Event[A]): Command[A] = liftFC(event)
+  private implicit def liftEvent[A](event: Event[A]): Command[A] = Free.liftF(event)
 
   def open(no: String, name: String, openingDate: Option[Date]): Command[String] = Opened(no, name, openingDate)
   def close(no: String, closeDate: Option[Date]): Command[Unit] = Closed(no, closeDate)
@@ -102,7 +101,7 @@ object PureInterpreter {
   }
 
   def interpret[A](c: Command[A], state: Map[String, Account] = Map.empty): Map[String, Account] =
-    runFC(c)(step).exec(state)
+    c.foldMap(step).exec(state)
 
 }
 

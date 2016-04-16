@@ -7,7 +7,6 @@ import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task._
-import Free.{FreeC, liftFC, runFC}
 
 import collection.concurrent.TrieMap
 
@@ -145,9 +144,9 @@ trait Commands {
   import Event._
   import scala.language.implicitConversions
 
-  type Command[A] = FreeC[Event, A]
+  type Command[A] = Free[Event, A]
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = liftFC(event)
+  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = Free.liftF(event)
 
   def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = Opened(no, name, openingDate, today)
   def close(no: String, closeDate: Option[DateTime]): Command[Account] = Closed(no, closeDate, today)
@@ -162,7 +161,7 @@ object RepositoryBackedInterpreter {
     override def apply[A](action: Event[A]): Task[A] = handleCommand(action)
   }
 
-  def apply[A](action: Command[A]): Task[A] = runFC(action)(step)
+  def apply[A](action: Command[A]): Task[A] = action.foldMap(step)
 }
 
 object Scripts extends Commands {

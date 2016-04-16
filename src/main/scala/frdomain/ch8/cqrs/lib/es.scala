@@ -4,7 +4,6 @@ package cqrs.lib
 import org.joda.time.DateTime
 import scalaz._
 import Scalaz._
-import scalaz.Free.{FreeC, runFC}
 import scalaz.concurrent.Task
 import \/._
 
@@ -37,11 +36,11 @@ trait Snapshot[A <: Aggregate] {
 }
 
 trait Commands[A] {
-  type Command[A] = FreeC[Event, A]
+  type Command[A] = Free[Event, A]
 }
 
 trait RepositoryBackedInterpreter {
   def step: Event ~> Task
 
-  def apply[A](action: FreeC[Event, A]): Task[A] = runFC(action)(step)
+  def apply[A](action: Free[Event, A]): Task[A] = action.foldMap(step)
 }

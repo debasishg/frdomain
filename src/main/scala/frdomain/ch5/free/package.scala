@@ -1,8 +1,8 @@
 package frdomain.ch5
 
-import scalaz.Free.FreeC
+import scalaz.Free
 
 package object free {
-  type AccountRepo[A] = FreeC[AccountRepoF, A]
+  type AccountRepo[A] = Free[AccountRepoF, A]
 }
 

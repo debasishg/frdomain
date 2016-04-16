@@ -6,7 +6,6 @@ import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task.{now, fail}
-import Free.runFC
 
 trait AccountRepoInterpreter {
   def apply[A](action: AccountRepo[A]): Task[A]
@@ -33,7 +32,7 @@ case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter {
   /**
    * Turns the AccountRepo script into a `Task` that executes it in a mutable setting
    */
-  def apply[A](action: AccountRepo[A]): Task[A] = runFC(action)(step)
+  def apply[A](action: AccountRepo[A]): Task[A] = action.foldMap(step)
 }
 
 case class AccountRepoShowInterpreter() {
@@ -49,6 +48,6 @@ case class AccountRepoShowInterpreter() {
   }
 
   def interpret[A](script: AccountRepo[A], ls: List[String]): List[String] =
-    runFC[AccountRepoF, ListState, A](script)(step).exec(ls)
+    script.foldMap(step).exec(ls)
 
 }
