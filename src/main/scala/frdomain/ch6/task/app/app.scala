@@ -25,6 +25,6 @@ object Main {
   val fixPF: Task[Seq[Balance]] = getFixedIncomePortfolio(accountNo, asOf)(AccountRepositoryInMemory)
 
   val r = Task.gatherUnordered(Seq(ccyPF, eqtPF, fixPF))
-  val portfolio = CustomerPortfolio(accountNo, asOf, r.run.foldLeft(List.empty[Balance])(_ ++ _))
+  val portfolio = CustomerPortfolio(accountNo, asOf, r.unsafePerformSync.foldLeft(List.empty[Balance])(_ ++ _))
 }
 

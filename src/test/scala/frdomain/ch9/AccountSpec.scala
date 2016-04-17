@@ -87,8 +87,9 @@ object CheckingAccountSpecification extends Properties("Account") {
   property("Checking Account creation failure") = 
     forAll(invalidCheckingAccountGen) { 
       _ match {
-        case -\/(NonEmptyList(InvalidAccountNo(_))) => true
-        case -\/(NonEmptyList(InvalidAccountNo(_), InvalidOpenCloseDate(_))) => true
+        case -\/(NonEmptyList(AccountException(InvalidAccountNo(_)), INil())) => true
+        case -\/(NonEmptyList(AccountException(InvalidAccountNo(_)),
+                              ICons(AccountException(InvalidOpenCloseDate(_)), INil()))) => true
         case _ => false
       }
     }
@@ -108,7 +109,7 @@ object CheckingAccountSpecification extends Properties("Account") {
   property("Update balance on closed account fails") = forAll(validClosedCheckingAccountGen, genAmount) { (creation, amount) =>
     creation.map { account =>
       updateBalance(account, amount) match {
-        case -\/(NonEmptyList(AlreadyClosed(_))) => true
+        case -\/(NonEmptyList(AccountException(AlreadyClosed(_)), INil())) => true
         case _ => false
       }
     }.getOrElse(false)
@@ -117,7 +118,7 @@ object CheckingAccountSpecification extends Properties("Account") {
   property("Update balance on account with insufficient funds fails") = forAll(validZeroBalanceCheckingAccountGen, genAmount) { (creation, amount) =>
     creation.map { account =>
       updateBalance(account, -amount) match {
-        case -\/(NonEmptyList(InsufficientBalance(_))) => true
+        case -\/(NonEmptyList(AccountException(InsufficientBalance(_)), INil())) => true
         case _ => false
       }
     }.getOrElse(false)
