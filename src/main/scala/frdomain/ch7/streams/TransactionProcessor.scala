@@ -4,8 +4,7 @@ package streams
 import akka.actor.{ActorSystem, Props}
 import akka.stream.ActorMaterializer
 import akka.stream.actor.ActorSubscriber
-import akka.stream.io.Framing
-import akka.stream.scaladsl.{Tcp, Source, Sink}
+import akka.stream.scaladsl.{Tcp, Source, Sink, Framing}
 import akka.util.ByteString
 
 import scala.concurrent.duration._
@@ -23,10 +22,9 @@ class TransactionProcessor(host: String, port: Int)(implicit val system: ActorSy
       val receiveSink = 
         conn.flow
             .via(Framing.delimiter(ByteString("\n"), maximumFrameLength = 4000, allowTruncation = true)).map(_.utf8String)
-            // .transform(() => Stages.parseLines("\n", 4000))
             .map(_.split(","))
             .mapConcat(Transaction(_).toList)
-            .to(Sink(ActorSubscriber[Transaction](summarizer)))
+            .to(Sink.fromSubscriber(ActorSubscriber[Transaction](summarizer)))
 
       Source.empty.to(receiveSink).run()
     }

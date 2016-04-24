@@ -2,7 +2,7 @@ package frdomain.ch7
 package streams
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
@@ -15,14 +15,14 @@ object FrontOffice extends App with Logging {
   val path = "/Users/debasishghosh/projects/frdomain/src/main/resources/transactions.csv"
   val getLines = () => scala.io.Source.fromFile(path).getLines()
 
-  val readLines = Source(getLines).filter(isValid).map( l => ByteString(l + "\n"))
+  val readLines = Source.fromIterator(getLines).filter(isValid).map( l => ByteString(l + "\n"))
 
   def isValid(line: String) = true
 
   val logWhenComplete = Sink.onComplete(r => logger.info("Transfer complete: " + r))
 
-  val graph = FlowGraph.closed() { implicit b =>
-    import FlowGraph.Implicits._
+  val graph = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
+    import GraphDSL.Implicits._
 
     val broadcast = b.add(Broadcast[ByteString](2))
 
@@ -33,7 +33,8 @@ object FrontOffice extends App with Logging {
 
     readLines ~> broadcast ~> serverConnection ~> logWhenComplete
                  broadcast ~> heartbeat        ~> Sink.ignore
-  }
+    ClosedShape
+  })
 
   implicit val mat = ActorMaterializer()
   graph.run()

@@ -25,11 +25,11 @@ object Main {
   /**
    * Create a stream of transactions
    */
-  val transactions: Source[Transaction, Unit] =
-    Source(allTransactions).mapConcat(identity)
+  val transactions: Source[Transaction, akka.NotUsed] =
+    Source.fromFuture(allTransactions).mapConcat(identity)
 
-  val accountNos: Source[String, Unit] =
-    Source(allAccounts).mapConcat(identity)
+  val accountNos: Source[String, akka.NotUsed] =
+    Source.fromFuture(allAccounts).mapConcat(identity)
 
   /**
    * Would like to fold transactions through monoid append
@@ -42,10 +42,10 @@ object Main {
   }
 
   /**
-   * Dumy function for writing transactions
+   * Dummy function for writing transactions
    */
-  val audit: Sink[Transaction, Future[Unit]] = Sink.foreach(println)
-  val writeNetAll: Sink[Map[String, Transaction], Future[Unit]] = Sink.foreach(println)
+  val audit: Sink[Transaction, Future[akka.Done]] = Sink.foreach(println)
+  val writeNetAll: Sink[Map[String, Transaction], Future[akka.Done]] = Sink.foreach(println)
 
   /**
    * Create multiple streams out of a single stream. The stream "transactions" is being
@@ -53,16 +53,16 @@ object Main {
    * then materialized to the fold sink "txnSink", which folds each of the transaction
    * substreams to compute the net value of the transaction for that account
    */
-  val netTxn: Source[RunnableGraph[Future[Transaction]], Unit] = 
-    transactions.map(validate).groupBy(_.accountNo).map { case (a, s) => s.toMat(txnSink)(Keep.right) }
+  val netTxn: RunnableGraph[Future[Transaction]] = 
+    transactions.map(validate).groupBy(100, _.accountNo).mergeSubstreams.toMat(txnSink)(Keep.right) 
 
   /**
    * Run all the materialized streams and print
    */
-  // netTxn.map(_.run()).runForeach(_.foreach(println))
+  // netTxn.run().foreach(println)
 
-  val graph = FlowGraph.closed(netTxnSink) { implicit b => ms =>
-    import FlowGraph.Implicits._
+  val graph = RunnableGraph.fromGraph(GraphDSL.create(netTxnSink) { implicit b => ms =>
+    import GraphDSL.Implicits._
  
     val accountBroadcast = b.add(Broadcast[Account](2))
     val txnBroadcast = b.add(Broadcast[Transaction](2))
@@ -76,7 +76,8 @@ object Main {
     accountNos ~> accounts ~> accountBroadcast ~> bankingTxns ~> merge ~> validation ~> txnBroadcast ~> ms
                               accountBroadcast ~> settlementTxns ~> merge
     txnBroadcast ~> audit
-  }
+    ClosedShape
+  })
 
   // val r = graph.run()
   // r foreach println
