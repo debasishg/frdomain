@@ -21,7 +21,7 @@ case class Transaction(id: String, accountNo: String, debitCredit: TransactionTy
 object Transaction {
   implicit val TransactionMonoid = new Monoid[Transaction] {
     val zero = Transaction("", "", Debit, 0)
-    def append(i: Transaction, j: => Transaction) = {
+    def append(i: Transaction, j: => Transaction) = { 
       val f = if (i.debitCredit == Debit) -i.amount else i.amount
       val s = if (j.debitCredit == Debit) -j.amount else j.amount
       val sum = f + s

@@ -21,6 +21,7 @@ object Main {
   implicit val ec = as.dispatcher
   val settings = ActorMaterializerSettings(as)
   implicit val mat = ActorMaterializer(settings)
+  final val MaxGroupCount: Int = 100
 
   /**
    * Create a stream of transactions
@@ -32,10 +33,9 @@ object Main {
     Source.fromFuture(allAccounts).mapConcat(identity)
 
   /**
-   * Would like to fold transactions through monoid append
+   * a Sink that completes the Future and prints
    */
-  val txnSink: Sink[Transaction, Future[Transaction]] =
-    Sink.fold[Transaction, Transaction](TransactionMonoid.zero)(_ |+| _)
+  val txnSink: Sink[Transaction, Future[akka.Done]] = Sink.foreach(println)
 
   val netTxnSink: Sink[Transaction, Future[Map[String, Transaction]]] = {
     Sink.fold[Map[String, Transaction], Transaction](Map.empty[String, Transaction]) { (acc, t) => acc |+| Map(t.accountNo -> t) }
@@ -50,11 +50,19 @@ object Main {
   /**
    * Create multiple streams out of a single stream. The stream "transactions" is being
    * demultiplexed into many streams split by account number. Each of the sub-streams are
-   * then materialized to the fold sink "txnSink", which folds each of the transaction
-   * substreams to compute the net value of the transaction for that account
+   * then folded over the TransactionMonoid which does the netting per account. Finally the
+   * substreams are merged and then materialized into a Sink.
+   *
+   * Optionally we can do an async fold but that only makes sense if the folds are expensive
+   * operations.
    */
-  val netTxn: RunnableGraph[Future[Transaction]] = 
-    transactions.map(validate).groupBy(100, _.accountNo).mergeSubstreams.toMat(txnSink)(Keep.right) 
+  val netTxn: RunnableGraph[Future[akka.Done]] = 
+    transactions.map(validate)
+                .groupBy(MaxGroupCount, _.accountNo)
+                .fold(TransactionMonoid.zero)(_ |+| _)
+                // .async
+                .mergeSubstreams
+                .toMat(txnSink)(Keep.right)
 
   /**
    * Run all the materialized streams and print
