@@ -38,5 +38,7 @@ object Main {
     val u = inter.apply(comp)
 
     val v = AccountRepoShowInterpreter().interpret(comp, List.empty[String])
+
+    val st = AccountRepoStateInterpreter(comp).run(Map.empty)
   }
 }
