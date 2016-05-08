@@ -1,21 +1,22 @@
 package frdomain.ch5
 package free
 
+import scala.language.higherKinds
 import scala.collection.mutable.{ Map => MMap }
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task.{now, fail}
 
-trait AccountRepoInterpreter {
-  def apply[A](action: AccountRepo[A]): Task[A]
+trait AccountRepoInterpreter[M[_]] {
+  def apply[A](action: AccountRepo[A]): M[A]
 }
-  
+
 /**
  * Basic interpreter that uses a global mutable Map to store the state
  * of computation
  */
-case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter {
+case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter[Task] {
   val table: MMap[String, Account] = MMap.empty[String, Account]
 
   val step: AccountRepoF ~> Task = new (AccountRepoF ~> Task) {
