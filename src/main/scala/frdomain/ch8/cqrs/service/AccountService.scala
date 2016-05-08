@@ -40,7 +40,7 @@ object AccountSnapshot extends Snapshot[Account] {
 trait AccountCommands extends Commands[Account] {
   import scala.language.implicitConversions
 
-  private implicit def liftEvent[Next](event: Event[Next]): Command[Next] = Free.liftF(event)
+  private implicit def liftEvent[A](event: Event[A]): Command[A] = Free.liftF(event)
 
   def open(no: String, name: String, openingDate: Option[DateTime]): Command[Account] = 
     Opened(no, name, openingDate, today)

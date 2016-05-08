@@ -15,7 +15,7 @@ object Common {
 import Common._
 
 /**
- * The `Event` abstraction. `Next` points to the next event in chain
+ * The `Event` abstraction. An event needs to have a timestamp.
  */
 trait Event[A] {
   def at: DateTime
