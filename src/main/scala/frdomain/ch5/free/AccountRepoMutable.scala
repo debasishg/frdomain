@@ -1,21 +1,22 @@
 package frdomain.ch5
 package free
 
+import scala.language.higherKinds
 import scala.collection.mutable.{ Map => MMap }
 import scalaz._
 import Scalaz._
 import scalaz.concurrent.Task
 import Task.{now, fail}
 
-trait AccountRepoInterpreter {
-  def apply[A](action: AccountRepo[A]): Task[A]
+trait AccountRepoInterpreter[M[_]] {
+  def apply[A](action: AccountRepo[A]): M[A]
 }
-  
+
 /**
  * Basic interpreter that uses a global mutable Map to store the state
  * of computation
  */
-case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter {
+case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter[Task] {
   val table: MMap[String, Account] = MMap.empty[String, Account]
 
   val step: AccountRepoF ~> Task = new (AccountRepoF ~> Task) {
@@ -33,6 +34,40 @@ case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter {
    * Turns the AccountRepo script into a `Task` that executes it in a mutable setting
    */
   def apply[A](action: AccountRepo[A]): Task[A] = action.foldMap(step)
+}
+
+object AccountRepoState {
+  type AccountMap = Map[String, Account]
+
+  type Err[A] = String \/ A
+  type AcccountState[A] = StateT[Err, AccountMap, A]
+}
+
+object AccountRepoStateInterpreter extends AccountRepoInterpreter[AccountRepoState.AcccountState] {
+  import AccountRepoState._
+
+  val step: AccountRepoF ~> AcccountState = new (AccountRepoF ~> AcccountState) {
+    override def apply[A](fa: AccountRepoF[A]): AcccountState[A] = fa match {
+      case Query(no) =>
+        StateT[Err, AccountMap, Account] { table =>
+          table.get(no) match {
+            case Some(account) => (table, account).right
+            case None => s"Account no $no not found".left
+          }
+        }
+      case Store(account) =>
+        modifyState(_ + (account.no -> account))
+      case Delete(no) =>
+        modifyState(_ - no)
+    }
+  }
+
+  def apply[A](action: AccountRepo[A]): AcccountState[A] = action.foldMap(step)
+
+  private def modifyState(f: AccountMap => AccountMap): AcccountState[Unit] =
+    StateT[Err, AccountMap, Unit] { table =>
+      (f(table), ()).right
+    }
 }
 
 case class AccountRepoShowInterpreter() {
