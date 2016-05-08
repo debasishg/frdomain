@@ -37,19 +37,19 @@ case class AccountRepoMutableInterpreter() extends AccountRepoInterpreter[Task] 
 }
 
 object AccountRepoState {
-  type AMap = Map[String, Account]
+  type AccountMap = Map[String, Account]
 
   type Err[A] = String \/ A
-  type ErrState[A] = StateT[Err, AMap, A]
+  type AcccountState[A] = StateT[Err, AccountMap, A]
 }
 
-object AccountRepoStateInterpreter extends AccountRepoInterpreter[AccountRepoState.ErrState] {
+object AccountRepoStateInterpreter extends AccountRepoInterpreter[AccountRepoState.AcccountState] {
   import AccountRepoState._
 
-  val step: AccountRepoF ~> ErrState = new (AccountRepoF ~> ErrState) {
-    override def apply[A](fa: AccountRepoF[A]): ErrState[A] = fa match {
+  val step: AccountRepoF ~> AcccountState = new (AccountRepoF ~> AcccountState) {
+    override def apply[A](fa: AccountRepoF[A]): AcccountState[A] = fa match {
       case Query(no) =>
-        StateT[Err, AMap, Account] { table =>
+        StateT[Err, AccountMap, Account] { table =>
           table.get(no) match {
             case Some(account) => (table, account).right
             case None => s"Account no $no not found".left
@@ -62,10 +62,10 @@ object AccountRepoStateInterpreter extends AccountRepoInterpreter[AccountRepoSta
     }
   }
 
-  def apply[A](action: AccountRepo[A]): ErrState[A] = action.foldMap(step)
+  def apply[A](action: AccountRepo[A]): AcccountState[A] = action.foldMap(step)
 
-  private def modifyState(f: AMap => AMap): ErrState[Unit] =
-    StateT[Err, AMap, Unit] { table =>
+  private def modifyState(f: AccountMap => AccountMap): AcccountState[Unit] =
+    StateT[Err, AccountMap, Unit] { table =>
       (f(table), ()).right
     }
 }
