@@ -20,7 +20,7 @@ class AccountServiceInterpreter extends AccountService[Account, Amount, Balance]
            name: String, 
            rate: Option[BigDecimal],
            openingDate: Option[Date],
-           accountType: AccountType) = kleisli { (repo: AccountRepository) =>
+           accountType: AccountType) = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
 
     repo.query(no) match {
       case \/-(Some(a)) => NonEmptyList(s"Already existing account with no $no").left[Account]
@@ -36,7 +36,7 @@ class AccountServiceInterpreter extends AccountService[Account, Amount, Balance]
     }
   }
 
-  def close(no: String, closeDate: Option[Date]) = kleisli { (repo: AccountRepository) =>
+  def close(no: String, closeDate: Option[Date]) = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
     repo.query(no) match {
       case \/-(None) => NonEmptyList(s"Account $no does not exist").left[Account]
       case \/-(Some(a)) => 
@@ -53,7 +53,7 @@ class AccountServiceInterpreter extends AccountService[Account, Amount, Balance]
   private case object D extends DC
   private case object C extends DC
 
-  private def up(no: String, amount: Amount, dc: DC): AccountOperation[Account] = kleisli { (repo: AccountRepository) =>
+  private def up(no: String, amount: Amount, dc: DC): AccountOperation[Account] = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
     repo.query(no) match {
       case \/-(None) => NonEmptyList(s"Account $no does not exist").left[Account]
       case \/-(Some(a)) => dc match {
