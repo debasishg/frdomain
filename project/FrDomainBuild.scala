@@ -3,15 +3,21 @@ import Keys._
 
 object FRDomainProject extends Build
 {
-  import Resolvers._
+  // import Resolvers._
 
-  resolvers += "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"
-  
-  lazy val root = Project("FRDomain", file(".")) settings(coreSettings : _*)
+  // resolvers += "Sonatype Snapshots" at "http://oss.sonatype.org/content/repositories/snapshots"
+  resolvers in ThisBuild += Resolver.sonatypeRepo("public")
+
+  resolvers in ThisBuild += Resolver.bintrayRepo("freek", "maven")
+
+  // val buildResolvers = resolvers ++= Seq(Resolver.sonatypeRepo("public"), Resolver.bintrayRepo("freek", "maven"))
+  val buildResolvers = resolvers ++= Seq(Resolver.sonatypeRepo("public"), "Bintray " at "https://dl.bintray.com/projectseptemberinc/maven")
+
+  lazy val root = Project("FRDomain", file(".")).settings(coreSettings : _*).settings(buildResolvers:_*)
 
   lazy val commonSettings: Seq[Setting[_]] = Seq(
     version := "0.01",
-    scalaVersion := "2.11.7",
+    scalaVersion := "2.11.8",
     crossScalaVersions := Seq("2.11.7"),
 
     scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
@@ -35,6 +41,8 @@ object FRDomainProject extends Build
       "com.h2database"                % "h2"                            % "1.4.187",
       "com.zaxxer"                    % "HikariCP-java6"                % "2.3.8",
       "ch.qos.logback"                % "logback-classic"               % "1.1.3",
+      "com.projectseptember"         %% "freek"                         % "0.3.0",
+      "org.spire-math"               %% "kind-projector"                % "0.7.1",
       "org.scalacheck"               %% "scalacheck"                    % "1.12.5"       % "test"
     ),
     parallelExecution in Test := false,
