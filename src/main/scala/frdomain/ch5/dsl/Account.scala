@@ -8,7 +8,7 @@ import cats.syntax.show._
 import cats.SemigroupK
 import cats.data.NonEmptyList
 
-import cats.data.Validated
+import cats.data.{ Validated, Xor }
 import cats.data.Validated.{Invalid, Valid}
 import cats.data.ValidatedNel
 
@@ -23,9 +23,9 @@ object common {
 
 import common._
 
-case class Balance(amount: Amount = 0, asOf: DateTime = today)
+private[dsl] case class Balance(amount: Amount = 0, asOf: DateTime = today)
 
-case class Account(no: String, name: String, dateOfOpening: DateTime = today, 
+private[dsl] case class Account(no: String, name: String, dateOfOpening: DateTime = today, 
   dateOfClosing: Option[DateTime] = None, balance: Balance = Balance(0))
 
 object Account {
@@ -41,7 +41,7 @@ object Account {
   final case class CannotCloseWithBalance(msg: String) extends AccountError
 
   type AccountValidation[A] = Validated[AccountError, A]
-  type AccountValidationNel[A] = Validated[NonEmptyList[AccountError], A]
+  type AccountValidationNel[A] = Xor[NonEmptyList[AccountError], A]
 
   def validAccountNo(no: String): AccountValidation[String] =
     if (no.size < 5) Invalid(InvalidAccountNo(s"Account no $no must be > 5 characters"))
@@ -64,20 +64,20 @@ object Account {
     SemigroupK[NonEmptyList].algebra[AccountError]
   
 
-  def open(no: String, name: String, openDate: DateTime): AccountValidationNel[Account] =
-    (validAccountNo(no).toValidatedNel |@| cannotBeInFuture(openDate).toValidatedNel) map { (n, od) =>
+  def open(no: String, name: String, openDate: DateTime): Xor[String, Account] =
+    ((validAccountNo(no).toValidatedNel |@| cannotBeInFuture(openDate).toValidatedNel) map { (n, od) =>
       Account(n, name, od)
-    }
+    }).toXor.leftMap(_.unwrap.mkString(","))
 
-  def transact(a: Account, amount: Amount, asOf: DateTime): AccountValidationNel[Account] =
-    (validBalance(a, amount).toValidatedNel |@| cannotBeInFuture(asOf).toValidatedNel) map { (amt, d) => 
+  def transact(a: Account, amount: Amount, asOf: DateTime): Xor[String, Account] =
+    ((validBalance(a, amount).toValidatedNel |@| cannotBeInFuture(asOf).toValidatedNel) map { (amt, d) => 
       a.copy(balance = Balance(amt, d))
-    }
+    }).toXor.leftMap(_.unwrap.mkString(","))
 
-  def close(a: Account, closeDate: DateTime): AccountValidationNel[Account] =
-    (isCloseable(a).toValidatedNel |@| cannotBeInFuture(closeDate).toValidatedNel) map { (_, cd) =>
+  def close(a: Account, closeDate: DateTime): Xor[String, Account] =
+    ((isCloseable(a).toValidatedNel |@| cannotBeInFuture(closeDate).toValidatedNel) map { (_, cd) =>
       a.copy(dateOfClosing = Some(closeDate))
-    }
+    }).toXor.leftMap(_.unwrap.mkString(","))
 }
 
 
