@@ -32,7 +32,7 @@ trait AccountRepository {
   } yield ()
 */
 
-  val accountRepositoryDSL = new (AccountRepo ~> cats.Id) {
+  val accountRepositoryInterpreter = new (AccountRepo ~> cats.Id) {
     val table = collection.mutable.Map.empty[String, Account]
 
     def apply[A](dsl: AccountRepo[A]) = dsl match {

@@ -19,7 +19,7 @@ trait AccountOperations {
   def transact(a: Account, amount: Amount, asOf: DateTime) = Transact(a, amount, asOf)
   def close(a: Account, closeDate: DateTime) = Close(a, closeDate)
 
-  val accountOperationsDSL = new (AccountOps ~> cats.Id) {
+  val accountOperationsInterpreter = new (AccountOps ~> cats.Id) {
     def apply[A](dsl: AccountOps[A]) = dsl match {
       case Open(no, name, openDate) => Account.open(no, name, openDate)
       case Transact(a, amount, asOf) => Account.transact(a, amount, asOf)

@@ -26,6 +26,6 @@ object Main extends AccountOperations with AccountRepository {
     s <- update(t.no, _.copy(name = "xxx"))
   } yield s
 
-  val interpreters = accountOperationsDSL :&: accountRepositoryDSL :&: Log.logger 
+  val interpreters = accountOperationsInterpreter :&: accountRepositoryInterpreter :&: Log.logger 
   dsl.value.interpret(interpreters)
 }
