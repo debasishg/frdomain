@@ -37,6 +37,7 @@ lazy val root = (project in file(".")).
     name := "frdomain",
     scalacOptions ++= Seq(
       "-feature",
+      "-unchecked",
       "-language:higherKinds",
       "-language:postfixOps",
       "-deprecation"

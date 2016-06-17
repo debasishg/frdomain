@@ -23,9 +23,9 @@ object common {
 
 import common._
 
-private[dsl] case class Balance(amount: Amount = 0, asOf: DateTime = today)
+case class Balance(amount: Amount = 0, asOf: DateTime = today)
 
-private[dsl] case class Account(no: String, name: String, dateOfOpening: DateTime = today, 
+case class Account(no: String, name: String, dateOfOpening: DateTime = today, 
   dateOfClosing: Option[DateTime] = None, balance: Balance = Balance(0))
 
 object Account {
@@ -64,20 +64,20 @@ object Account {
     SemigroupK[NonEmptyList].algebra[AccountError]
   
 
-  def open(no: String, name: String, openDate: DateTime): Xor[String, Account] =
+  def open(no: String, name: String, openDate: DateTime): AccountValidationNel[Account] =
     ((validAccountNo(no).toValidatedNel |@| cannotBeInFuture(openDate).toValidatedNel) map { (n, od) =>
       Account(n, name, od)
-    }).toXor.leftMap(_.unwrap.mkString(","))
+    }).toXor
 
-  def transact(a: Account, amount: Amount, asOf: DateTime): Xor[String, Account] =
+  def transact(a: Account, amount: Amount, asOf: DateTime): AccountValidationNel[Account] =
     ((validBalance(a, amount).toValidatedNel |@| cannotBeInFuture(asOf).toValidatedNel) map { (amt, d) => 
       a.copy(balance = Balance(amt, d))
-    }).toXor.leftMap(_.unwrap.mkString(","))
+    }).toXor
 
-  def close(a: Account, closeDate: DateTime): Xor[String, Account] =
+  def close(a: Account, closeDate: DateTime): AccountValidationNel[Account] =
     ((isCloseable(a).toValidatedNel |@| cannotBeInFuture(closeDate).toValidatedNel) map { (_, cd) =>
       a.copy(dateOfClosing = Some(closeDate))
-    }).toXor.leftMap(_.unwrap.mkString(","))
+    }).toXor
 }
 
 
