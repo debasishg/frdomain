@@ -24,7 +24,7 @@ lazy val commonSettings = Seq(
       "com.h2database"                % "h2"                            % "1.4.187",
       "com.zaxxer"                    % "HikariCP-java6"                % "2.3.8",
       "ch.qos.logback"                % "logback-classic"               % "1.1.3",
-      "com.projectseptember"         %% "freek"                         % "0.4.0",
+      "com.projectseptember"         %% "freek"                         % "0.4.1",
       "org.spire-math"               %% "kind-projector"                % "0.8.0",
       "com.milessabin"               %% "si2712fix-plugin"              % "1.2.0"        cross CrossVersion.full,
       "org.scalacheck"               %% "scalacheck"                    % "1.12.5"       % "test"
