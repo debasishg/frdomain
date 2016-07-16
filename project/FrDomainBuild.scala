@@ -17,7 +17,7 @@ object FRDomainProject extends Build
     scalacOptions in Compile ++= Seq( "-unchecked", "-feature", "-language:postfixOps", "-deprecation" )
   )
 
-  val akkaVersion = "2.4.4"
+  val akkaVersion = "2.4.8"
 
   lazy val coreSettings = commonSettings ++ Seq(
     name := "FRDomain",
