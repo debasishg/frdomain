@@ -10,10 +10,14 @@ trait AccountOperations {
   import cats.{~>, Id}
   import cats.data.{ NonEmptyList, Xor }
 
-  sealed trait AccountOps[A]
+  trait AccountOps[A]
   case class Open(no: String, name: String, openDate: DateTime) extends AccountOps[AccountValidationNel[Account]]
   case class Transact(a: Account, amount: Amount, asOf: DateTime) extends AccountOps[AccountValidationNel[Account]]
   case class Close(a: Account, closeDate: DateTime) extends AccountOps[AccountValidationNel[Account]]
+
+  object AccountOps {
+    type PRG = AccountOps :|: Log.DSL :|: FXNil
+  }
 
   def open(no: String, name: String, openDate: DateTime) = Open(no, name, openDate)
   def transact(a: Account, amount: Amount, asOf: DateTime) = Transact(a, amount, asOf)

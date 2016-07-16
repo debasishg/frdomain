@@ -7,30 +7,25 @@ import cats.{~>, Id}
 import freek._
 
 trait AccountRepository {
-  sealed trait AccountRepo[A]
+  trait AccountRepo[A]
   
   case class Query(no: String) extends AccountRepo[Xor[String, Account]]
   case class Store(account: Account) extends AccountRepo[Xor[String, Account]]
   case class Delete(no: String) extends AccountRepo[Xor[String, Unit]]
 
+  object AccountRepo {
+    type PRG = AccountRepo :|: FXNil
+    type O = Xor[String, ?] :&: Bulb
+  }
+
   def query(no: String) = Query(no)
   def store(account: Account) = Store(account)
   def delete(no: String) = Delete(no)
 
-/*
-  type PR = AccountRepo :|: FXNil
-  type P = Xor[String, ?] :&: Bulb
-
   def update(no: String, f: Account => Account) = for {
-    a <- query(no).freek[PR].onionT[P]
-    s <- store(f(a)).freek[PR].onionT[P]
-  } yield s
-
-  def updateBalance(no: String, amount: Amount, f: (Account, Amount) => Account) = for {
-    a <- query(no).freek[PR].onionT[P]
-    _ <- store(f(a, amount)).freek[PR].onionT[P]
-  } yield ()
-*/
+    a <-  Query(no).freeko[AccountRepo.PRG, AccountRepo.O]
+    _ <-  Store(f(a)).freeko[AccountRepo.PRG, AccountRepo.O]
+  } yield (())
 
   val accountRepositoryInterpreter = new (AccountRepo ~> cats.Id) {
     val table = collection.mutable.Map.empty[String, Account]
