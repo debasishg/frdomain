@@ -5,17 +5,30 @@ import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
+import java.nio.file._
 
 import scala.concurrent.duration._
 
+/**
+ * The FrontOffice that sends streaming input to TransactionProcessor
+ *
+ * Run this as:
+ *
+ * $ sbt
+ * > console
+ * scala> import frdomain.ch7.streams._
+ * scala> FrontOffice.main(Array(""))
+ *
+ * The updated balance for each account gets displayed periodically.
+ */
 object FrontOffice extends App with Logging {
   implicit val system = ActorSystem("front_office")
-  val serverConnection = Tcp().outgoingConnection("localhost", 9982)
+  val serverConnection = Tcp().outgoingConnection("127.0.0.1", 9982)
 
   val path = "/Users/debasishghosh/projects/frdomain/src/main/resources/transactions.csv"
   val getLines = () => scala.io.Source.fromFile(path).getLines()
 
-  val readLines = Source.fromIterator(getLines).filter(isValid).map( l => ByteString(l + "\n"))
+  val readLines = Source.fromIterator(getLines).filter(isValid).map(l => ByteString(l + "\n"))
 
   def isValid(line: String) = true
 
