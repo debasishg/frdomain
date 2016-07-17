@@ -22,11 +22,44 @@ sealed trait Account {
   def balance: Balance
 }
 
-final case class CheckingAccount (no: String, name: String,
-  dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account
+/**
+ * In order to ensure that the user cannot use `apply` and `copy` as well, we need
+ * to delegate both of them to the smart constructor. Still there can be some hairy issues
+ * as in http://stackoverflow.com/questions/19462598/scala-case-class-implementation-of-smart-constructors
+ **/
+final case class CheckingAccount private (no: String, name: String,
+  dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account {
 
-final case class SavingsAccount (no: String, name: String, rateOfInterest: Amount, 
-  dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account
+  def copy(no: String = no, 
+    name: String = name, 
+    dateOfOpen: Option[Date] = dateOfOpen, 
+    dateOfClose: Option[Date] = dateOfClose, 
+    balance: Balance = balance) = Account.checkingAccount(no, name, dateOfOpen, dateOfClose, balance)
+
+  def apply(no: String = no, 
+    name: String = name, 
+    dateOfOpen: Option[Date] = dateOfOpen, 
+    dateOfClose: Option[Date] = dateOfClose, 
+    balance: Balance = balance) = Account.checkingAccount(no, name, dateOfOpen, dateOfClose, balance)
+}
+
+final case class SavingsAccount private (no: String, name: String, rateOfInterest: Amount, 
+  dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account {
+
+  def copy(no: String = no, 
+    name: String = name, 
+    rateOfInterest: Amount = rateOfInterest,
+    dateOfOpen: Option[Date] = dateOfOpen, 
+    dateOfClose: Option[Date] = dateOfClose, 
+    balance: Balance = balance) = Account.savingsAccount(no, name, rateOfInterest, dateOfOpen, dateOfClose, balance)
+
+  def apply(no: String = no, 
+    name: String = name, 
+    rateOfInterest: Amount = rateOfInterest,
+    dateOfOpen: Option[Date] = dateOfOpen, 
+    dateOfClose: Option[Date] = dateOfClose, 
+    balance: Balance = balance) = Account.savingsAccount(no, name, rateOfInterest, dateOfOpen, dateOfClose, balance)
+}
 
 object Account {
   def checkingAccount(no: String, name: String, openDate: Option[Date], closeDate: Option[Date], 
@@ -40,6 +73,7 @@ object Account {
   def savingsAccount(no: String, name: String, rate: BigDecimal, openDate: Option[Date], 
     closeDate: Option[Date], balance: Balance): Try[Account] = { 
 
+    println("in smart")
     closeDateCheck(openDate, closeDate).map { d =>
       if (rate <= BigDecimal(0)) 
         throw new Exception(s"Interest rate $rate must be > 0")
