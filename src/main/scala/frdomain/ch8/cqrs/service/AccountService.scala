@@ -109,38 +109,46 @@ object RepositoryBackedAccountInterpreter extends RepositoryBackedInterpreter {
 
   private def handleCommand[A](e: Event[A]): Task[A] = e match {
 
-    case o @ Opened(no, name, odate, _) => validateOpen(no).fold(
-      err => fail(new RuntimeException(err)),
-      _   => now {
-        val a = Account(no, name, odate.get)
-        eventLog.put(no, o)
-        a
-      }
-    )
+    case o @ Opened(no, name, odate, _) => Task { 
+      validateOpen(no).fold(
+        err => throw new RuntimeException(err),
+        _   => { 
+          val a = Account(no, name, odate.get)
+          eventLog.put(no, o)
+          a
+        }
+      )
+    }
 
-    case c @ Closed(no, cdate, _) => validateClose(no, cdate).fold(
-      err => fail(new RuntimeException(err)),
-      currentState => now {
-        eventLog.put(no, c)
-        updateState(c, currentState)(no)
-      }
-    )
+    case c @ Closed(no, cdate, _) => Task {
+      validateClose(no, cdate).fold(
+        err => throw new RuntimeException(err),
+        currentState => {
+          eventLog.put(no, c)
+          updateState(c, currentState)(no)
+        }
+      )
+    }
 
-    case d @ Debited(no, amount, _) => validateDebit(no, amount).fold(
-      err => fail(new RuntimeException(err)),
-      currentState => now {
-        eventLog.put(no, d)
-        updateState(d, currentState)(no)
-      }
-    )
+    case d @ Debited(no, amount, _) => Task {
+      validateDebit(no, amount).fold(
+        err => throw new RuntimeException(err),
+        currentState => {
+          eventLog.put(no, d)
+          updateState(d, currentState)(no)
+        }
+      )
+    }
 
-    case r @ Credited(no, amount, _) => validateCredit(no).fold(
-      err => fail(new RuntimeException(err)),
-      currentState => now {
-        eventLog.put(no, r)
-        updateState(r, currentState)(no)
-      }
-    )
+    case r @ Credited(no, amount, _) => Task {
+      validateCredit(no).fold(
+        err => throw new RuntimeException(err),
+        currentState => {
+          eventLog.put(no, r)
+          updateState(r, currentState)(no)
+        }
+      )
+    }
   }
 }
 
@@ -165,5 +173,13 @@ object Scripts extends AccountCommands {
       _ <- credit(a.no, 10000)
       _ <- credit(a.no, 30000)
       d <- debit(a.no, 50000)
+    } yield d
+
+  val comp =
+    for {
+      a <- open("a1", "debasish ghosh", Some(today))
+      _ <- credit(a.no, 10000)
+      _ <- credit(a.no, 30000)
+      d <- debit(a.no, 23000)
     } yield d
 }
