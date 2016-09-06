@@ -1,11 +1,12 @@
 package frdomain.ch7
 package streams
 
+import java.net.InetSocketAddress
+
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
-import java.nio.file._
 
 import scala.concurrent.duration._
 
@@ -23,16 +24,21 @@ import scala.concurrent.duration._
  */
 object FrontOffice extends App with Logging {
   implicit val system = ActorSystem("front_office")
-  val serverConnection = Tcp().outgoingConnection("127.0.0.1", 9982)
+  val serverConnection = Tcp().outgoingConnection(new InetSocketAddress("127.0.0.1", 9982), halfClose=false)
 
-  val path = "/Users/debasishghosh/projects/frdomain/src/main/resources/transactions.csv"
-  val getLines = () => scala.io.Source.fromFile(path).getLines()
+  val path = Option.apply(this.getClass.getResource("/transactions.csv")) match {
+    case None =>
+      throw new IllegalArgumentException("Cannot find the /transactions.csv file")
+    case Some(url) =>
+      url
+  }
+  val getLines = () => scala.io.Source.fromURL(path).getLines()
 
-  val readLines = Source.fromIterator(getLines).filter(isValid).map(l => ByteString(l + "\n"))
+  val readLines = Source.fromIterator(getLines).filter(isValid).map(l => ByteString(l + System.lineSeparator))
 
   def isValid(line: String) = true
 
-  val logWhenComplete = Sink.onComplete(r => logger.info("Transfer complete: " + r))
+  val logWhenComplete = Sink.onComplete( r => {logger.info("Transfer complete: " + r); system.terminate() })
 
   val graph = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
     import GraphDSL.Implicits._
