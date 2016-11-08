@@ -9,9 +9,10 @@ import algebra.AccountService
 
 object AccountService extends AccountService[Account, Amount, Balance] {
   def open(no: String, name: String, openingDate: Option[Date]): Try[Account] = {
+    val currentDate = today
     if (no.isEmpty || name.isEmpty) Failure(new Exception(s"Account no or name cannot be blank") )
-    else if (openingDate.getOrElse(today) before today) Failure(new Exception(s"Cannot open account in the past"))
-    else Success(Account(no, name, openingDate.getOrElse(today)))
+    else if (openingDate.getOrElse(currentDate) before currentDate) Failure(new Exception(s"Cannot open account in the past"))
+    else Success(Account(no, name, openingDate.getOrElse(currentDate)))
   }
 
   def close(account: Account, closeDate: Option[Date]): Try[Account] = {
