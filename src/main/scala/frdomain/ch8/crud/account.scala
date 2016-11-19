@@ -2,7 +2,7 @@ package frdomain.ch8
 package crud
 
 import java.sql.Timestamp
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 
 case class Account(id: Option[Long], 
   no: String, 

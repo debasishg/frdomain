@@ -1,6 +1,6 @@
 package frdomain.ch7
 
-import com.typesafe.scalalogging.slf4j.StrictLogging
+import com.typesafe.scalalogging.StrictLogging
 
 package object streams {
   type Logging = StrictLogging

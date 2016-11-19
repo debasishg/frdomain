@@ -4,7 +4,6 @@ package streams
 import java.util.Date
 import scala.concurrent.duration._
 import scala.concurrent.{ Future, ExecutionContext }
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.immutable._
 
 import scalaz._

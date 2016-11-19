@@ -2,9 +2,9 @@ package frdomain.ch8
 package crud
 
 import java.sql.Timestamp
-import slick.driver.H2Driver.api._
+import slick.jdbc.H2Profile.api._
 import slick.jdbc.meta._
-import slick.backend.DatabasePublisher
+import slick.basic.DatabasePublisher
 
 import scala.concurrent._
 import scala.concurrent.duration._
