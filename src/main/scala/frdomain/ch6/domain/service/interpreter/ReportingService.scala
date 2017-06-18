@@ -16,16 +16,10 @@ import model.common._
 
 class ReportingServiceInterpreter extends ReportingService[Amount] {
 
-  def balanceByAccount: ReportOperation[Seq[(String, Amount)]] = kleisli[Valid, AccountRepository, Seq[(String, Amount)]] { (repo: AccountRepository) =>
-    EitherT {
-      Future {
-        repo.all match {
-          case \/-(as) => as.map(a => (a.no, a.balance.amount)).right
-          case a @ -\/(_) => a
-        }
-      }
+  def balanceByAccount: ReportOperation[Seq[(String, Amount)]] =
+    kleisli[Valid, AccountRepository, Seq[(String, Amount)]] { (repo: AccountRepository) =>
+      repo.all map { as => as.map(a => (a.no, a.balance.amount)) }
     }
-  }
-} 
+}
 
 object ReportingService extends ReportingServiceInterpreter
