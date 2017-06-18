@@ -33,6 +33,6 @@ trait AccountService[Account, Amount, Balance] {
   def transfer(from: String, to: String, amount: Amount): AccountOperation[(Account, Account)] = for { 
     a <- debit(from, amount)
     b <- credit(to, amount)
-  } yield ((a, b))
+  } yield (a, b)
 }
 
