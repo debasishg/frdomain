@@ -3,20 +3,26 @@ package domain
 package repository
 
 import java.util.Date
-import scalaz._
-import Scalaz._
-import \/._
-import model.{ Account, Balance }
 
-trait AccountRepository { 
-  def query(no: String): \/[NonEmptyList[String], Option[Account]]
-  def store(a: Account): \/[NonEmptyList[String], Account]
-  def balance(no: String): \/[NonEmptyList[String], Balance] = query(no) match {
-    case \/-(Some(a)) => a.balance.right
-    case \/-(None) => NonEmptyList(s"No account exists with no $no").left[Balance]
-    case a @ -\/(_) => a
+import frdomain.ch6.domain.model.{Account, Balance}
+import frdomain.ch6.domain.service.Valid
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scalaz.NonEmptyList
+import scalaz.Scalaz._
+
+trait AccountRepository {
+  def query(no: String): Valid[Option[Account]]
+  def store(a: Account): Valid[Account]
+  def query(openedOn: Date): Valid[Seq[Account]]
+  def all: Valid[Seq[Account]]
+
+  def balance(no: String): Valid[Balance] = query(no).flatMap { maybeAcc =>
+    Valid {
+      maybeAcc match {
+        case Some(acc) => acc.balance.right
+        case None => NonEmptyList(s"No account exists with no $no").left
+      }
+    }
   }
-  def query(openedOn: Date): \/[NonEmptyList[String], Seq[Account]]
-  def all: \/[NonEmptyList[String], Seq[Account]]
 }
-

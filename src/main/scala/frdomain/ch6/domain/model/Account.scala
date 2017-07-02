@@ -28,15 +28,15 @@ sealed trait Account {
 final case class CheckingAccount (no: String, name: String,
   dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account
 
-final case class SavingsAccount (no: String, name: String, rateOfInterest: Amount, 
+final case class SavingsAccount (no: String, name: String, rateOfInterest: Amount,
   dateOfOpen: Option[Date], dateOfClose: Option[Date] = None, balance: Balance = Balance()) extends Account
 
 object Account {
-  private def validateAccountNo(no: String) = 
-    if (no.isEmpty || no.size < 5) s"Account No has to be at least 5 characters long: found $no".failureNel[String] 
+  private def validateAccountNo(no: String) =
+    if (no.isEmpty || no.size < 5) s"Account No has to be at least 5 characters long: found $no".failureNel[String]
     else no.successNel[String]
 
-  private def validateOpenCloseDate(od: Date, cd: Option[Date]) = cd.map { c => 
+  private def validateOpenCloseDate(od: Date, cd: Option[Date]) = cd.map { c =>
     if (c before od) s"Close date [$c] cannot be earlier than open date [$od]".failureNel[(Option[Date], Option[Date])]
     else (od.some, cd).successNel[String]
   }.getOrElse { (od.some, cd).successNel[String] }
@@ -45,26 +45,26 @@ object Account {
     if (rate <= BigDecimal(0)) s"Interest rate $rate must be > 0".failureNel[BigDecimal]
     else rate.successNel[String]
 
-  def checkingAccount(no: String, name: String, openDate: Option[Date], closeDate: Option[Date], 
-    balance: Balance): \/[NonEmptyList[String], Account] = { 
+  def checkingAccount(no: String, name: String, openDate: Option[Date], closeDate: Option[Date],
+    balance: Balance): \/[NonEmptyList[String], Account] = {
 
     val od = openDate.getOrElse(today)
 
     (
-      validateAccountNo(no) |@| 
+      validateAccountNo(no) |@|
       validateOpenCloseDate(openDate.getOrElse(today), closeDate)
     ) { (n, d) =>
       CheckingAccount(n, name, d._1, d._2, balance)
     }.disjunction
   }
 
-  def savingsAccount(no: String, name: String, rate: BigDecimal, openDate: Option[Date], 
-    closeDate: Option[Date], balance: Balance): \/[NonEmptyList[String], Account] = { 
+  def savingsAccount(no: String, name: String, rate: BigDecimal, openDate: Option[Date],
+    closeDate: Option[Date], balance: Balance): \/[NonEmptyList[String], Account] = {
 
     val od = openDate.getOrElse(today)
 
     (
-      validateAccountNo(no) |@| 
+      validateAccountNo(no) |@|
       validateOpenCloseDate(openDate.getOrElse(today), closeDate) |@|
       validateRate(rate)
     ) { (n, d, r) =>
@@ -110,5 +110,3 @@ object Account {
     case _ => None
   }
 }
-
-
