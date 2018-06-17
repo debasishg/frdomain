@@ -32,9 +32,14 @@ trait AddressLenses {
 }
 
 trait CustomerLenses {
-  protected val nameLens = Lens[Customer, Int](
+  protected val idLens = Lens[Customer, Int](
     get = _.id,
     set = (o, v) => o.copy(id = v)
+  )
+
+  protected val nameLens = Lens[Customer, String](
+    get = _.name,
+    set = (o, v) => o.copy(name = v)
   )
 
   protected val addressLens = Lens[Customer, Address](
