@@ -3,13 +3,13 @@ package domain
 package service
 
 import java.util.Date
-import scalaz._
-import Scalaz._
-import Kleisli._
+
+import cats._
+import cats.data._
+import cats.instances.all._
+import cats.effect.IO
 
 import repository.AccountRepository
-import scala.concurrent._
-import ExecutionContext.Implicits.global
 
 
 sealed trait AccountType
@@ -17,7 +17,6 @@ case object Checking extends AccountType
 case object Savings extends AccountType
 
 trait AccountService[Account, Amount, Balance] {
-  type AccountOperation[A] = Kleisli[Valid, AccountRepository, A]
 
   def open(no: String, name: String, rate: Option[BigDecimal], openingDate: Option[Date], 
     accountType: AccountType): AccountOperation[Account]
@@ -35,4 +34,3 @@ trait AccountService[Account, Amount, Balance] {
     b <- credit(to, amount)
   } yield ((a, b))
 }
-

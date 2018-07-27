@@ -5,16 +5,13 @@ package interpreter
 
 import java.util.{ Date, Calendar }
 
-import scalaz._
-import Scalaz._
-import \/._
-import Kleisli._
-
-import scala.concurrent._
-import ExecutionContext.Implicits.global
+import cats._
+import cats.data._
+import cats.instances.all._
+import cats.effect.IO
 
 import model.{ Account, Balance }
-import model.common._
+import common._
 import repository.AccountRepository
 
 class AccountServiceInterpreter extends AccountService[Account, Amount, Balance] {
@@ -23,36 +20,50 @@ class AccountServiceInterpreter extends AccountService[Account, Amount, Balance]
            name: String, 
            rate: Option[BigDecimal],
            openingDate: Option[Date],
-           accountType: AccountType) = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
+           accountType: AccountType) = Kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
 
     EitherT {
-      Future {
-        repo.query(no) match {
-          case \/-(Some(a)) => NonEmptyList(s"Already existing account with no $no").left[Account]
-          case \/-(None)    => accountType match {
-            case Checking => Account.checkingAccount(no, name, openingDate, None, Balance()).flatMap(repo.store)
-            case Savings  => rate map { r =>
-              Account.savingsAccount(no, name, r, openingDate, None, Balance()).flatMap(repo.store)
-            } getOrElse {
-              NonEmptyList(s"Rate needs to be given for savings account").left[Account]
-            }
+      repo.query(no).flatMap {
+
+        case Right(Some(a)) => IO(Left(AlreadyExistingAccount(a.no)))
+
+        case Right(None)    => accountType match {
+
+          case Checking => createOrUpdate(repo, Account.checkingAccount(no, name, openingDate, None, Balance())) 
+
+          case Savings  => rate map { r =>
+            createOrUpdate(repo, Account.savingsAccount(no, name, r, openingDate, None, Balance()))
+          } getOrElse {
+            IO(Left(RateMissingForSavingsAccount))
           }
-          case a @ -\/(_) => a
         }
+
+        case Left(x)        => IO(Left(MiscellaneousDomainExceptions(x)))
       }
     }
   }
 
-  def close(no: String, closeDate: Option[Date]) = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
+  private def createOrUpdate(repo: AccountRepository, 
+    errorOrAccount: ErrorOr[Account]): IO[Either[AccountServiceException, Account]] = errorOrAccount match {
+
+    case Left(errs) => IO(Left(MiscellaneousDomainExceptions(errs)) )
+    case Right(a) => repo.store(a).map {
+      case Right(acc) => Right(acc)
+      case Left(errs) => Left(MiscellaneousDomainExceptions(errs))
+    }
+  }
+
+  def close(no: String, closeDate: Option[Date]) = Kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
     EitherT {
-      Future {
-        repo.query(no) match {
-          case \/-(None) => NonEmptyList(s"Account $no does not exist").left[Account]
-          case \/-(Some(a)) => 
-            val cd = closeDate.getOrElse(today)
-            Account.close(a, cd).flatMap(repo.store)
-          case a @ -\/(_) => a
-        }
+      repo.query(no).flatMap {
+
+        case Right(None) => IO(Left(NonExistingAccount(no)))
+
+        case Right(Some(a))    => 
+          val cd = closeDate.getOrElse(today)
+          createOrUpdate(repo, Account.close(a, cd))
+
+        case Left(x)        => IO(Left(MiscellaneousDomainExceptions(x)))
       }
     }
   }
@@ -64,27 +75,30 @@ class AccountServiceInterpreter extends AccountService[Account, Amount, Balance]
   private case object D extends DC
   private case object C extends DC
 
-  private def up(no: String, amount: Amount, dc: DC): AccountOperation[Account] = kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
+  private def up(no: String, amount: Amount, dc: DC) = Kleisli[Valid, AccountRepository, Account] { (repo: AccountRepository) =>
     EitherT {
-      Future {
-        repo.query(no) match {
-          case \/-(None) => NonEmptyList(s"Account $no does not exist").left[Account]
-          case \/-(Some(a)) => dc match {
-            case D => Account.updateBalance(a, -amount).flatMap(repo.store) 
-            case C => Account.updateBalance(a, amount).flatMap(repo.store) 
-          }
-          case a @ -\/(_) => a
+      repo.query(no).flatMap {
+
+        case Right(None) => IO(Left(NonExistingAccount(no)))
+
+        case Right(Some(a))    => dc match {
+          case D => createOrUpdate(repo, Account.updateBalance(a, -amount))
+          case C => createOrUpdate(repo, Account.updateBalance(a, amount))
         }
+
+        case Left(x)        => IO(Left(MiscellaneousDomainExceptions(x)))
       }
     }
   }
 
-  def balance(no: String) = 
-    kleisli[Valid, AccountRepository, Balance] { (repo: AccountRepository) => 
-      EitherT {
-        Future { repo.balance(no) }
+  def balance(no: String) = Kleisli[Valid, AccountRepository, Balance] { (repo: AccountRepository) =>
+    EitherT {
+      repo.balance(no).map { 
+        case Left(errs) => Left(MiscellaneousDomainExceptions(errs))
+        case Right(b) => Right(b)
       }
     }
+  }
 }
 
 object AccountService extends AccountServiceInterpreter

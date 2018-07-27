@@ -2,16 +2,15 @@ package frdomain.ch6
 package domain
 package app
 
-import scalaz._
-import Scalaz._
-import Kleisli._
-import scala.concurrent._
-import ExecutionContext.Implicits.global
+import cats._
+import cats.data._
+import cats.implicits._
+import cats.instances.all._
 
 import service.interpreter.{ AccountService, InterestPostingService, ReportingService }
 import repository.interpreter.AccountRepositoryInMemory
 import service.{ Checking, Savings }
-import model.common._
+import common._
 import model.Account
 
 object App {
@@ -44,4 +43,12 @@ object App {
   } yield a
 
   val y = c(AccountRepositoryInMemory)
+
+  // y.value.unsafeRunSync
+  //
+  // scala> res0.unsafeRunAsync {
+  //      |   case Left(s) => println(s)
+  //      |   case Right(s) => println(s)
+  //      | }
+  // Right(Stream((a2345,2000), ?))
 }

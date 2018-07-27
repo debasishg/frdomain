@@ -2,9 +2,9 @@ package frdomain.ch6
 package domain
 package service
 
-import scalaz._
-import Scalaz._
-import Kleisli._
+import cats._
+import cats.data._
+import cats.instances.all._
 
 import repository.AccountRepository
 

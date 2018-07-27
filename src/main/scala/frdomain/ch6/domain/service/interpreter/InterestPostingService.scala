@@ -3,37 +3,34 @@ package domain
 package service
 package interpreter
 
-import scalaz._
-import Scalaz._
-import Kleisli._
+import cats._
+import cats.data._
+import cats.instances.all._
+import cats.effect.IO
 
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-
-import model.{ Account, Balance }
-import model.common._
+import common._
+import model.Account
 
 class InterestPostingServiceInterpreter extends InterestPostingService[Account, Amount] {
-  def computeInterest = kleisli[Valid, Account, Amount] { (account: Account) =>
+  def computeInterest = Kleisli[Valid, Account, Amount] { (account: Account) =>
     EitherT {
-      Future {
-        if (account.dateOfClose isDefined) NonEmptyList(s"Account ${account.no} is closed").left
+      IO {
+        if (account.dateOfClose isDefined) Left(ClosedAccount(account.no))
         else Account.rate(account).map { r =>
           val a = account.balance.amount
-          a + a * r
-        }.getOrElse(BigDecimal(0)).right
+          Right(a + a * r)
+        }.getOrElse(Right(BigDecimal(0)))
       }
     }
   }
 
-  def computeTax = kleisli[Valid, Amount, Amount] { amount: Amount =>
-    EitherT {
-      Future {
-        (amount * 0.1).right
+  def computeTax = Kleisli[Valid, Amount, Amount] { (amount: Amount) =>
+    EitherT[IO, AccountServiceException, Amount] {
+      IO {
+        Right(amount * 0.1)
       }
     }
   }
 }
 
 object InterestPostingService extends InterestPostingServiceInterpreter
-

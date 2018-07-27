@@ -2,8 +2,11 @@ package frdomain.ch6
 package domain
 package app
 
-import scalaz._
-import Scalaz._
+import cats._
+import cats.data._
+import cats.instances.all._
+
+/*
 import \/._
 
 import repository.interpreter.AccountRepositoryInMemory
@@ -20,3 +23,4 @@ object App2 {
     d <- balance(c.no)
   } yield d
 }
+*/

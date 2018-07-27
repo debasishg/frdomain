@@ -3,20 +3,25 @@ package domain
 package repository
 
 import java.util.Date
-import scalaz._
-import Scalaz._
-import \/._
+
+import cats._
+import cats.data._
+import cats.instances.all._
+
+import cats.effect.IO
+import common._
+
 import model.{ Account, Balance }
 
 trait AccountRepository { 
-  def query(no: String): \/[NonEmptyList[String], Option[Account]]
-  def store(a: Account): \/[NonEmptyList[String], Account]
-  def balance(no: String): \/[NonEmptyList[String], Balance] = query(no) match {
-    case \/-(Some(a)) => a.balance.right
-    case \/-(None) => NonEmptyList(s"No account exists with no $no").left[Balance]
-    case a @ -\/(_) => a
-  }
-  def query(openedOn: Date): \/[NonEmptyList[String], Seq[Account]]
-  def all: \/[NonEmptyList[String], Seq[Account]]
-}
+  def query(no: String): IO[ErrorOr[Option[Account]]]
+  def store(a: Account): IO[ErrorOr[Account]]
+  def query(openedOn: Date): IO[ErrorOr[Seq[Account]]]
+  def all: IO[ErrorOr[Seq[Account]]]
 
+  def balance(no: String): IO[ErrorOr[Balance]] = query(no).map {
+    case Right(Some(a)) => Right(a.balance)
+    case Right(None) => Left(NonEmptyList.of(s"No account exists with no $no"))
+    case Left(x) => Left(x)
+  }
+}

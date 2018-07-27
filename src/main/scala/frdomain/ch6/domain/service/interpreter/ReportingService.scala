@@ -3,26 +3,22 @@ package domain
 package service
 package interpreter
 
-import scalaz._
-import Scalaz._
-import Kleisli._
-
-import scala.concurrent._
-import ExecutionContext.Implicits.global
+import cats._
+import cats.data._
+import cats.instances.all._
+import cats.effect.IO
 
 import repository.AccountRepository
-import model.common._
+import common._
 
 
 class ReportingServiceInterpreter extends ReportingService[Amount] {
 
-  def balanceByAccount: ReportOperation[Seq[(String, Amount)]] = kleisli[Valid, AccountRepository, Seq[(String, Amount)]] { (repo: AccountRepository) =>
+  def balanceByAccount: ReportOperation[Seq[(String, Amount)]] = Kleisli[Valid, AccountRepository, Seq[(String, Amount)]] { (repo: AccountRepository) =>
     EitherT {
-      Future {
-        repo.all match {
-          case \/-(as) => as.map(a => (a.no, a.balance.amount)).right
-          case a @ -\/(_) => a
-        }
+      repo.all.map {
+        case Left(errs) => Left(MiscellaneousDomainExceptions(errs))
+        case Right(as) => Right(as.map(a => (a.no, a.balance.amount)))
       }
     }
   }
