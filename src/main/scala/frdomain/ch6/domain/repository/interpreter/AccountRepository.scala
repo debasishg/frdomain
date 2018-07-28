@@ -14,7 +14,7 @@ import cats.effect.IO
 import common._
 import model.{ Account, Balance }
 
-trait AccountRepositoryInMemory extends AccountRepository {
+class AccountRepositoryInMemory extends AccountRepository {
   lazy val repo = MMap.empty[String, Account]
 
   def query(no: String): IO[ErrorOr[Option[Account]]] = IO(Right(repo.get(no)))
