@@ -6,8 +6,8 @@ lazy val commonSettings = Seq(
     , Resolver.sonatypeRepo("snapshots")
     , "Bintray " at "https://dl.bintray.com/projectseptemberinc/maven"
   ),
-  scalaVersion := "2.12.6",
-  crossScalaVersions := Seq("2.12.6", "2.11.8"),
+  scalaVersion := "2.12.10",
+  crossScalaVersions := Seq("2.12.10", "2.11.8"),
   licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
   libraryDependencies ++= Seq(
       "org.scalaz"                   %% "scalaz-core"                   % "7.2.7",
